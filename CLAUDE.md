@@ -250,10 +250,11 @@ Toujours suivre cette méthodologie pour les nouvelles fonctionnalités :
 - ✅ EPIC-012 : Qualité (tests 339/339, documentation API/Services)
 - ✅ EPIC-013 : SaaS UI Redesign (Blade + TailwindCSS v4)
 
-### EPICs à venir (Sprint 5+)
-- ⏳ Import/export avancé (XLSX, filtres plus riches)
-- ⏳ Multi-utilisateurs et organisations
-- ⏳ Webhooks sortants (Slack, Discord)
+### EPICs optionnelles — NE PAS DÉVELOPPER sans demande explicite
+> Ces idées sont notées pour référence future uniquement. **Ne jamais les implémenter proactivement.**
+- 💡 Import/export avancé (XLSX, filtres plus riches)
+- 💡 Multi-utilisateurs et organisations
+- 💡 Webhooks sortants (Slack, Discord)
 
 ## Configuration environnement
 

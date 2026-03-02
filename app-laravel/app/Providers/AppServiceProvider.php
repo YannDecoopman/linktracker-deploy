@@ -28,9 +28,9 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting(): void
     {
-        // Vérification manuelle d'un backlink : 10 req/min par utilisateur authentifié
+        // Vérification manuelle d'un backlink : 60 req/min par utilisateur authentifié
         RateLimiter::for('backlink-check', function (Request $request) {
-            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
         // Import CSV : 5 req/min par utilisateur (opération lourde)
