@@ -336,80 +336,28 @@
     {{-- ── Contenu : Nouveaux Backlinks ── --}}
     <div x-show="tab === 'backlinks'" x-cloak>
         @if(count($recentBacklinks ?? []) > 0)
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead>
-                        <tr class="bg-neutral-50 border-b border-neutral-100">
-                            <th class="px-5 py-2.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Site</th>
-                            <th class="px-5 py-2.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">URL Source / Ancre</th>
-                            <th class="px-5 py-2.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Statut</th>
-                            <th class="px-5 py-2.5 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider">DF</th>
-                            <th class="px-5 py-2.5 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider">Indexé</th>
-                            <th class="px-5 py-2.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Tier</th>
-                            <th class="px-5 py-2.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Publié</th>
+            <div class="overflow-x-auto" x-data="{ selected: [] }">
+                <x-table>
+                    <x-slot:header>
+                        <tr>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase whitespace-nowrap">Site</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase whitespace-nowrap">URL Source</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase whitespace-nowrap">Ancre</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase whitespace-nowrap">URL Cible</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase whitespace-nowrap">Tier</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase whitespace-nowrap">Réseau</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase whitespace-nowrap">Statut</th>
+                            <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase">DF</th>
+                            <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase">Idx</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase whitespace-nowrap">Vérifié</th>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-neutral-50">
+                    </x-slot:header>
+                    <x-slot:body>
                         @foreach($recentBacklinks as $backlink)
-                            @php
-                                $statusMap = [
-                                    'active'  => ['label' => 'Actif',    'class' => 'text-emerald-700 bg-emerald-50 border-emerald-200'],
-                                    'lost'    => ['label' => 'Perdu',    'class' => 'text-red-700 bg-red-50 border-red-200'],
-                                    'changed' => ['label' => 'Modifié',  'class' => 'text-amber-700 bg-amber-50 border-amber-200'],
-                                ];
-                                $s = $statusMap[$backlink->status] ?? ['label' => ucfirst($backlink->status), 'class' => 'text-neutral-600 bg-neutral-50 border-neutral-200'];
-                            @endphp
-                            <tr class="hover:bg-neutral-50 transition-colors">
-                                <td class="px-5 py-3 whitespace-nowrap">
-                                    <a href="{{ route('projects.show', $backlink->project_id) }}"
-                                       class="text-sm font-semibold text-neutral-700 hover:text-brand-600 truncate block max-w-[120px]">
-                                        {{ $backlink->project?->name ?? '—' }}
-                                    </a>
-                                </td>
-                                <td class="px-5 py-3">
-                                    <a href="{{ $backlink->source_url }}" target="_blank"
-                                       class="text-brand-500 hover:text-brand-600 hover:underline font-mono text-xs block truncate max-w-xs">
-                                        {{ Str::limit($backlink->source_url, 55) }}
-                                    </a>
-                                    @if($backlink->anchor_text)
-                                        <span class="text-xs text-neutral-400 italic">{{ Str::limit($backlink->anchor_text, 40) }}</span>
-                                    @endif
-                                </td>
-                                <td class="px-5 py-3 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold border rounded-full {{ $s['class'] }}">
-                                        {{ $s['label'] }}
-                                    </span>
-                                </td>
-                                <td class="px-5 py-3 text-center whitespace-nowrap">
-                                    @if($backlink->is_dofollow === true)
-                                        <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold border rounded-full text-emerald-700 bg-emerald-50 border-emerald-200">DF</span>
-                                    @elseif($backlink->is_dofollow === false)
-                                        <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold border rounded-full text-red-600 bg-red-50 border-red-200">NF</span>
-                                    @else
-                                        <span class="text-neutral-300 text-xs">—</span>
-                                    @endif
-                                </td>
-                                <td class="px-5 py-3 text-center whitespace-nowrap">
-                                    @if($backlink->is_indexed === true)
-                                        <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold border rounded-full text-emerald-700 bg-emerald-50 border-emerald-200">Yes</span>
-                                    @elseif($backlink->is_indexed === false)
-                                        <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold border rounded-full text-red-600 bg-red-50 border-red-200">No</span>
-                                    @else
-                                        <span class="text-neutral-300 text-xs">—</span>
-                                    @endif
-                                </td>
-                                <td class="px-5 py-3 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold border rounded-full text-neutral-600 bg-neutral-50 border-neutral-200">
-                                        {{ $backlink->tier_level === 'tier1' ? 'T1' : 'T2' }}
-                                    </span>
-                                </td>
-                                <td class="px-5 py-3 whitespace-nowrap text-xs text-neutral-400">
-                                    {{ ($backlink->published_at ?? $backlink->created_at)?->format('d/m/Y') ?? '—' }}
-                                </td>
-                            </tr>
+                            <x-backlink-row :backlink="$backlink" :show-project="true" :show-price="false" :show-actions="false" :show-select="false" />
                         @endforeach
-                    </tbody>
-                </table>
+                    </x-slot:body>
+                </x-table>
             </div>
         @else
             <div class="flex flex-col items-center justify-center py-14 text-center">

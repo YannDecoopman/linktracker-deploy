@@ -258,11 +258,15 @@ class BacklinkControllerTest extends TestCase
 
         $response->assertRedirect(route('backlinks.index'));
 
+        // is_dofollow n'est pas settable à la création (géré par le checker)
+        // Seule invoice_paid est gérée par le formulaire
         $this->assertDatabaseHas('backlinks', [
             'project_id' => $project->id,
-            'is_dofollow' => false,
             'invoice_paid' => false,
         ]);
+        // last_checked_at null → is_dofollow null (jamais vérifié)
+        $backlink = \App\Models\Backlink::where('project_id', $project->id)->first();
+        $this->assertNull($backlink->is_dofollow);
     }
 
     /**

@@ -25,7 +25,7 @@ class BacklinkFactory extends Factory
             'rel_attributes' => 'follow',
             'is_dofollow' => true,
             'first_seen_at' => now(),
-            'last_checked_at' => fake()->optional()->dateTimeBetween('-1 week', 'now'),
+            'last_checked_at' => now(),
         ];
     }
 
@@ -76,6 +76,17 @@ class BacklinkFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'is_dofollow' => false,
             'rel_attributes' => 'nofollow',
+            'last_checked_at' => now(),
+        ]);
+    }
+
+    /**
+     * Indicate that the backlink has never been checked.
+     */
+    public function unchecked(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'last_checked_at' => null,
         ]);
     }
 }

@@ -41,11 +41,9 @@ class Backlink extends Model
         'tier_level'   => 'tier1',
         'spot_type'    => 'external',
         'invoice_paid' => false,
-        'is_dofollow'  => true,
     ];
 
     protected $casts = [
-        'is_dofollow' => 'boolean',
         'is_indexed' => 'boolean',
         'invoice_paid' => 'boolean',
         'first_seen_at' => 'datetime',
@@ -56,6 +54,19 @@ class Backlink extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    /**
+     * Accessor is_dofollow : retourne null si le backlink n'a jamais été vérifié
+     * (last_checked_at === null), sinon la valeur booléenne réelle.
+     * Cela évite d'afficher "DF" ou "NF" pour un lien jamais contrôlé.
+     */
+    public function getIsDofollowAttribute(?int $value): ?bool
+    {
+        if ($this->attributes['last_checked_at'] === null) {
+            return null;
+        }
+        return (bool) $value;
+    }
 
     /**
      * Get the project that owns the backlink.

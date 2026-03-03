@@ -174,12 +174,10 @@ class BacklinkController extends Controller
         $backlink = \DB::transaction(function () use ($validated, $request) {
             // Handle checkbox values (convert to boolean)
             $validated['invoice_paid'] = $request->boolean('invoice_paid');
-            $validated['is_dofollow'] = $request->boolean('is_dofollow');
 
             // Set default values
             $validated['status'] = $validated['status'] ?? 'active';
             $validated['first_seen_at'] = now();
-            $validated['last_checked_at'] = now();
 
             // Ajouter l'utilisateur connecté si disponible
             if (auth()->check()) {
@@ -328,7 +326,9 @@ class BacklinkController extends Controller
         \DB::transaction(function () use ($validated, $request, $backlink) {
             // Handle checkbox values (convert to boolean)
             $validated['invoice_paid'] = $request->boolean('invoice_paid');
-            $validated['is_dofollow'] = $request->boolean('is_dofollow');
+            // Ne pas écraser is_dofollow : cette valeur est gérée exclusivement
+            // par le checker (BacklinkCheckerService) lors des vérifications.
+            unset($validated['is_dofollow']);
 
             $backlink->update($validated);
         });
