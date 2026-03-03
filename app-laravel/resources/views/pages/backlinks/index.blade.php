@@ -14,106 +14,12 @@
     </x-page-header>
 
     {{-- Filters --}}
-    <div class="bg-white rounded-lg border border-neutral-200 p-6 mb-6">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-neutral-900">
-                Filtres
-                @if($activeFiltersCount > 0)
-                    <x-badge variant="brand" class="ml-2">{{ $activeFiltersCount }} actif(s)</x-badge>
-                @endif
-            </h3>
-            @if(request()->hasAny(['search', 'status', 'project_id', 'tier_level', 'spot_type', 'sort']))
-                <x-button variant="secondary" size="sm" href="{{ route('backlinks.index') }}">
-                    Réinitialiser tous les filtres
-                </x-button>
-            @endif
-        </div>
-
-        <form method="GET" action="{{ route('backlinks.index') }}" class="space-y-4">
-            {{-- Recherche textuelle --}}
-            <div>
-                <label for="search" class="block text-sm font-medium text-neutral-700 mb-1">Recherche</label>
-                <input
-                    type="text"
-                    id="search"
-                    name="search"
-                    value="{{ request('search') }}"
-                    placeholder="Rechercher dans URL source, ancre ou URL cible..."
-                    class="block w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
-                />
-            </div>
-
-            {{-- Filtres en grille --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {{-- Status Filter --}}
-                <div>
-                    <label for="status" class="block text-sm font-medium text-neutral-700 mb-1">Statut</label>
-                    <select
-                        id="status"
-                        name="status"
-                        class="block w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
-                    >
-                        <option value="">Tous</option>
-                        <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Actif</option>
-                        <option value="lost" {{ request('status') === 'lost' ? 'selected' : '' }}>Perdu</option>
-                        <option value="changed" {{ request('status') === 'changed' ? 'selected' : '' }}>Modifié</option>
-                    </select>
-                </div>
-
-                {{-- Project Filter --}}
-                <div>
-                    <label for="project_id" class="block text-sm font-medium text-neutral-700 mb-1">Site</label>
-                    <select
-                        id="project_id"
-                        name="project_id"
-                        class="block w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
-                    >
-                        <option value="">Tous</option>
-                        @foreach($projects as $project)
-                            <option value="{{ $project->id }}" {{ request('project_id') == $project->id ? 'selected' : '' }}>
-                                {{ $project->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Tier Level Filter --}}
-                <div>
-                    <label for="tier_level" class="block text-sm font-medium text-neutral-700 mb-1">Tiers</label>
-                    <select
-                        id="tier_level"
-                        name="tier_level"
-                        class="block w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
-                    >
-                        <option value="">Tous</option>
-                        <option value="tier1" {{ request('tier_level') === 'tier1' ? 'selected' : '' }}>Tier 1</option>
-                        <option value="tier2" {{ request('tier_level') === 'tier2' ? 'selected' : '' }}>Tier 2</option>
-                    </select>
-                </div>
-
-                {{-- Spot Type Filter --}}
-                <div>
-                    <label for="spot_type" class="block text-sm font-medium text-neutral-700 mb-1">Type de réseau</label>
-                    <select
-                        id="spot_type"
-                        name="spot_type"
-                        class="block w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
-                    >
-                        <option value="">Tous</option>
-                        <option value="external" {{ request('spot_type') === 'external' ? 'selected' : '' }}>Externe</option>
-                        <option value="internal" {{ request('spot_type') === 'internal' ? 'selected' : '' }}>Interne (PBN)</option>
-                    </select>
-                </div>
-            </div>
-
-            {{-- Submit Button --}}
-            <div class="flex justify-end">
-                <x-button variant="primary" type="submit">
-                    Appliquer les filtres
-                </x-button>
-            </div>
-        </form>
-    </div>
+    <x-backlink-filters
+        :action="route('backlinks.index')"
+        :reset-url="route('backlinks.index')"
+        :active-count="$activeFiltersCount"
+        :projects="$projects"
+    />
 
     {{-- Résultats + sélecteur par page --}}
     <div class="mb-4 flex items-center justify-between gap-4">
