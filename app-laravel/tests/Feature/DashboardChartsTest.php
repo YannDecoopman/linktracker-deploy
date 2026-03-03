@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Backlink;
 use App\Models\BacklinkCheck;
+use App\Models\BacklinkSnapshot;
 use App\Models\DomainMetric;
 use App\Models\Project;
 use App\Models\User;
@@ -89,15 +90,19 @@ class DashboardChartsTest extends TestCase
 
     public function test_chart_data_counts_active_backlinks(): void
     {
-        $project = Project::factory()->for($this->user)->create();
-        Backlink::factory()->for($project)->create(['status' => 'active']);
-        Backlink::factory()->for($project)->create(['status' => 'active']);
-        Backlink::factory()->for($project)->create(['status' => 'lost']);
+        // Le graphique est basé sur les snapshots, pas les backlinks en temps réel
+        BacklinkSnapshot::create([
+            'snapshot_date' => today()->toDateString(),
+            'project_id'    => null,
+            'count_active'  => 2,
+            'count_lost'    => 1,
+            'count_changed' => 0,
+            'count_total'   => 3,
+        ]);
 
         $response = $this->get(route('dashboard.chart', ['days' => 7]));
 
         $data = $response->json();
-        // At least one day should have active >= 2
         $maxActive = max($data['active']);
         $this->assertGreaterThanOrEqual(2, $maxActive);
     }
@@ -167,6 +172,55 @@ class DashboardChartsTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('pas de données');
+    }
+
+    // ── STORY-051 : clés perfect / not_indexed / nofollow ───────────────
+    // Note : dans l'implémentation actuelle, perfect = active (alias via snapshot),
+    // not_indexed et nofollow sont retournés à 0 (non encore calculés par snapshot).
+
+    public function test_chart_data_perfect_equals_active_series(): void
+    {
+        // perfect est un alias de active dans la réponse JSON actuelle
+        BacklinkSnapshot::create([
+            'snapshot_date' => today()->toDateString(),
+            'project_id'    => null,
+            'count_active'  => 3,
+            'count_lost'    => 0,
+            'count_changed' => 0,
+            'count_total'   => 3,
+        ]);
+
+        $response = $this->get(route('dashboard.chart', ['days' => 7]));
+
+        $data = $response->json();
+        $this->assertEquals($data['active'], $data['perfect'],
+            'perfect doit être un alias de active dans la réponse JSON');
+    }
+
+    public function test_chart_data_not_indexed_series_is_present(): void
+    {
+        $response = $this->get(route('dashboard.chart', ['days' => 7]));
+
+        $data = $response->json();
+        $this->assertArrayHasKey('not_indexed', $data);
+        $this->assertCount(7, $data['not_indexed']);
+        // Tous les éléments sont des entiers (actuellement 0 — non calculés par snapshot)
+        foreach ($data['not_indexed'] as $value) {
+            $this->assertIsInt($value);
+        }
+    }
+
+    public function test_chart_data_nofollow_series_is_present(): void
+    {
+        $response = $this->get(route('dashboard.chart', ['days' => 7]));
+
+        $data = $response->json();
+        $this->assertArrayHasKey('nofollow', $data);
+        $this->assertCount(7, $data['nofollow']);
+        // Tous les éléments sont des entiers (actuellement 0 — non calculés par snapshot)
+        foreach ($data['nofollow'] as $value) {
+            $this->assertIsInt($value);
+        }
     }
 
     public function test_dashboard_stats_cards_show_correct_counts(): void
