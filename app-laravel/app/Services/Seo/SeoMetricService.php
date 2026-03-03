@@ -4,6 +4,7 @@ namespace App\Services\Seo;
 
 use App\Models\DomainMetric;
 use App\Services\Seo\Providers\CustomProvider;
+use App\Services\Seo\Providers\DataForSeoProvider;
 use App\Services\Seo\Providers\MozProvider;
 use App\Services\Seo\Providers\SeoMetricProviderInterface;
 use Illuminate\Support\Facades\Log;
@@ -74,9 +75,41 @@ class SeoMetricService
         $providerName = config('seo.provider', 'custom');
 
         return match ($providerName) {
-            'moz' => $this->buildMozProvider(),
-            default => new CustomProvider(),
+            'moz'        => $this->buildMozProvider(),
+            'dataforseo' => $this->buildDataForSeoProvider(),
+            default      => new CustomProvider(),
         };
+    }
+
+    private function buildDataForSeoProvider(): SeoMetricProviderInterface
+    {
+        // Préférence : credentials chiffrés en base (utilisateur courant ou premier admin)
+        $login    = '';
+        $password = '';
+
+        $user = auth()->user() ?? \App\Models\User::first();
+        if ($user && ! empty($user->dataforseo_login_encrypted)) {
+            try {
+                $login    = \Illuminate\Support\Facades\Crypt::decryptString($user->dataforseo_login_encrypted);
+                $password = \Illuminate\Support\Facades\Crypt::decryptString($user->dataforseo_password_encrypted ?? '');
+            } catch (\Exception) {
+                // Fallback sur env si déchiffrement échoue
+                $login    = config('seo.dataforseo_login', '');
+                $password = config('seo.dataforseo_password', '');
+            }
+        } else {
+            $login    = config('seo.dataforseo_login', '');
+            $password = config('seo.dataforseo_password', '');
+        }
+
+        $provider = new DataForSeoProvider($login, $password);
+
+        if (! $provider->isAvailable()) {
+            Log::warning('SeoMetricService: DataforSEO provider configured but credentials missing, falling back to custom');
+            return new CustomProvider();
+        }
+
+        return $provider;
     }
 
     private function buildMozProvider(): SeoMetricProviderInterface

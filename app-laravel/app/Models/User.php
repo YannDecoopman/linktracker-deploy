@@ -30,6 +30,8 @@ class User extends Authenticatable
         'email_alerts_enabled',
         'seo_provider',
         'seo_api_key_encrypted',
+        'dataforseo_login_encrypted',
+        'dataforseo_password_encrypted',
     ];
 
     /**

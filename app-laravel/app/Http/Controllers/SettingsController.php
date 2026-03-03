@@ -144,4 +144,74 @@ class SettingsController extends Controller
             ]);
         }
     }
+
+    /**
+     * STORY-068 : Sauvegarder les credentials DataforSEO (chiffrés).
+     */
+    public function updateDataforSeo(Request $request)
+    {
+        $validated = $request->validate([
+            'dataforseo_login'    => ['nullable', 'string', 'max:255'],
+            'dataforseo_password' => ['nullable', 'string', 'max:500'],
+            'seo_provider'        => ['required', 'in:dataforseo,moz,custom'],
+        ]);
+
+        $updateData = ['seo_provider' => $validated['seo_provider']];
+
+        if (! empty($validated['dataforseo_login'])) {
+            $updateData['dataforseo_login_encrypted'] = Crypt::encryptString($validated['dataforseo_login']);
+        }
+
+        if (! empty($validated['dataforseo_password'])) {
+            $updateData['dataforseo_password_encrypted'] = Crypt::encryptString($validated['dataforseo_password']);
+        }
+
+        auth()->user()->update($updateData);
+
+        return back()->with('success', 'Configuration DataforSEO sauvegardée.');
+    }
+
+    /**
+     * STORY-068 : Tester la connexion DataforSEO.
+     */
+    public function testDataforSeoConnection(Request $request)
+    {
+        $user = auth()->user();
+
+        if (empty($user->dataforseo_login_encrypted) || empty($user->dataforseo_password_encrypted)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Identifiants DataforSEO non configurés.',
+            ]);
+        }
+
+        try {
+            $login    = Crypt::decryptString($user->dataforseo_login_encrypted);
+            $password = Crypt::decryptString($user->dataforseo_password_encrypted);
+
+            $response = Http::withBasicAuth($login, $password)
+                ->timeout(10)
+                ->get('https://api.dataforseo.com/v3/appendix/user_data');
+
+            if ($response->successful()) {
+                $credits = $response->json('tasks.0.result.0.money.balance') ?? null;
+                $msg = 'Connexion réussie !';
+                if ($credits !== null) {
+                    $msg .= " Crédits restants : \${$credits}";
+                }
+                return response()->json(['success' => true, 'message' => $msg]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => "Erreur API HTTP {$response->status()}. Vérifiez vos identifiants.",
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur : ' . $e->getMessage(),
+            ]);
+        }
+    }
 }

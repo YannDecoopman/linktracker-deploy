@@ -24,6 +24,11 @@
                     class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors">
                     APIs SEO
                 </button>
+                <button @click="activeTab = 'dataforseo'"
+                    :class="activeTab === 'dataforseo' ? 'border-brand-500 text-brand-600' : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'"
+                    class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors">
+                    DataforSEO
+                </button>
                 <a href="{{ route('settings.webhook') }}"
                     class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300 transition-colors">
                     Webhook
@@ -246,6 +251,93 @@
             </div>
         </div>
 
+        {{-- Onglet DataforSEO --}}
+        <div x-show="activeTab === 'dataforseo'" x-cloak>
+            <div class="bg-white rounded-lg border border-neutral-200 p-6 max-w-2xl" x-data="dataforSeoForm()">
+                <h2 class="text-base font-semibold text-neutral-900 mb-1">DataforSEO API</h2>
+                <p class="text-sm text-neutral-500 mb-2">
+                    Connectez DataforSEO pour enrichir vos domaines sources avec DA, DR, Spam Score et Referring Domains.
+                </p>
+
+                {{-- Indicateur provider actif --}}
+                <div class="mb-5 flex items-center gap-2">
+                    <span class="text-xs text-neutral-500">Provider actif :</span>
+                    @if(($user->seo_provider ?? 'custom') === 'dataforseo')
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                            ✓ DataforSEO actif
+                        </span>
+                    @else
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-500">
+                            {{ $user->seo_provider ?? 'custom' }}
+                        </span>
+                    @endif
+                </div>
+
+                <form method="POST" action="{{ route('settings.dataforseo') }}">
+                    @csrf
+                    @method('PATCH')
+
+                    <input type="hidden" name="seo_provider" value="dataforseo">
+
+                    <div class="space-y-4">
+                        <div>
+                            <label for="dataforseo_login" class="block text-sm font-medium text-neutral-700 mb-1">
+                                Login (email)
+                            </label>
+                            <input :type="showLogin ? 'text' : 'password'"
+                                id="dataforseo_login" name="dataforseo_login"
+                                placeholder="{{ $user->dataforseo_login_encrypted ? '••••••••••••••••' : 'votre@email.com' }}"
+                                class="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
+                            <p class="mt-1 text-xs text-neutral-500">Laissez vide pour conserver le login actuel.</p>
+                        </div>
+                        <div>
+                            <label for="dataforseo_password" class="block text-sm font-medium text-neutral-700 mb-1">
+                                Password
+                            </label>
+                            <div class="flex gap-2">
+                                <input :type="showPassword ? 'text' : 'password'"
+                                    id="dataforseo_password" name="dataforseo_password"
+                                    placeholder="{{ $user->dataforseo_password_encrypted ? '••••••••' : 'Votre mot de passe DataforSEO' }}"
+                                    class="flex-1 px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
+                                <button type="button" @click="showPassword = !showPassword"
+                                    class="px-3 py-2 border border-neutral-300 rounded-lg text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50 text-sm">
+                                    <span x-text="showPassword ? 'Masquer' : 'Afficher'"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex items-center gap-3">
+                        <x-button type="submit" variant="primary">Sauvegarder et activer DataforSEO</x-button>
+                        <button type="button" @click="testConnection()"
+                            class="px-4 py-2 border border-neutral-300 rounded-lg text-sm text-neutral-700 hover:bg-neutral-50 transition-colors">
+                            Tester la connexion
+                        </button>
+                    </div>
+
+                    {{-- Résultat du test --}}
+                    <div x-show="testResult" x-transition class="mt-4 p-3 rounded-lg text-sm"
+                        :class="testSuccess ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'">
+                        <span x-text="testResult"></span>
+                    </div>
+                </form>
+
+                {{-- Option revenir à custom --}}
+                @if(($user->seo_provider ?? 'custom') === 'dataforseo')
+                    <div class="mt-6 pt-5 border-t border-neutral-100">
+                        <form method="POST" action="{{ route('settings.seo') }}">
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="seo_provider" value="custom">
+                            <button type="submit" class="text-xs text-neutral-500 hover:text-red-500 transition-colors">
+                                Désactiver DataforSEO (repasser en mode gratuit)
+                            </button>
+                        </form>
+                    </div>
+                @endif
+            </div>
+        </div>
+
         {{-- Onglet Compte --}}
         <div x-show="activeTab === 'account'" x-cloak>
             <div class="bg-white rounded-lg border border-neutral-200 p-6 max-w-2xl">
@@ -281,6 +373,33 @@
 
 @push('scripts')
 <script>
+function dataforSeoForm() {
+    return {
+        showLogin: false,
+        showPassword: false,
+        testResult: null,
+        testSuccess: false,
+        async testConnection() {
+            this.testResult = 'Test en cours…';
+            this.testSuccess = false;
+            try {
+                const res = await fetch('{{ route('settings.dataforseo.test') }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json',
+                    },
+                });
+                const data = await res.json();
+                this.testResult = data.message;
+                this.testSuccess = data.success;
+            } catch (e) {
+                this.testResult = 'Erreur de connexion.';
+            }
+        },
+    };
+}
+
 function seoSettingsForm() {
     return {
         provider: '{{ $user->seo_provider ?? 'custom' }}',

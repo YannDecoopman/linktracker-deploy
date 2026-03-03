@@ -18,18 +18,22 @@ class DomainMetric extends Model
         'cf',
         'spam_score',
         'backlinks_count',
+        'referring_domains_count',
+        'organic_keywords_count',
         'provider',
         'last_updated_at',
     ];
 
     protected $casts = [
-        'da' => 'integer',
-        'dr' => 'integer',
-        'tf' => 'integer',
-        'cf' => 'integer',
-        'spam_score' => 'integer',
-        'backlinks_count' => 'integer',
-        'last_updated_at' => 'datetime',
+        'da'                      => 'integer',
+        'dr'                      => 'integer',
+        'tf'                      => 'integer',
+        'cf'                      => 'integer',
+        'spam_score'              => 'integer',
+        'backlinks_count'         => 'integer',
+        'referring_domains_count' => 'integer',
+        'organic_keywords_count'  => 'integer',
+        'last_updated_at'         => 'datetime',
     ];
 
     /**

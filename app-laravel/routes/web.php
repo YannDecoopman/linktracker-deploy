@@ -10,6 +10,7 @@ use App\Http\Controllers\WebhookSettingsController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SourceDomainController;
 
 /*
 |--------------------------------------------------------------------------
@@ -84,6 +85,8 @@ Route::patch('/settings/monitoring', [SettingsController::class, 'updateMonitori
 Route::post('/settings/monitoring/run-check', [SettingsController::class, 'runCheck'])->name('settings.monitoring.run-check');
 Route::patch('/settings/seo', [SettingsController::class, 'updateSeo'])->name('settings.seo');
 Route::post('/settings/seo/test', [SettingsController::class, 'testSeoConnection'])->name('settings.seo.test');
+Route::patch('/settings/dataforseo', [SettingsController::class, 'updateDataforSeo'])->name('settings.dataforseo');
+Route::post('/settings/dataforseo/test', [SettingsController::class, 'testDataforSeoConnection'])->name('settings.dataforseo.test');
 
 // Settings - Webhook configurable (STORY-019)
 Route::get('/settings/webhook', [WebhookSettingsController::class, 'show'])->name('settings.webhook');
@@ -94,6 +97,12 @@ Route::get('/settings/webhook/generate-secret', [WebhookSettingsController::clas
 // Profile utilisateur (STORY-046)
 Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
 Route::patch('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+
+// Domaines sources (EPIC-014) - AVANT catch-all
+Route::get('/domains', [SourceDomainController::class, 'index'])->name('domains.index');
+Route::post('/domains', [SourceDomainController::class, 'store'])->name('domains.store');
+Route::get('/domains/{domain}', [SourceDomainController::class, 'show'])->name('domains.show')->where('domain', '[a-z0-9\-\.]+');
+Route::post('/domains/{domain}/refresh-metrics', [SourceDomainController::class, 'refreshMetrics'])->name('domains.refresh-metrics')->middleware(['throttle:seo-refresh'])->where('domain', '[a-z0-9\-\.]+');
 
 // Marketplace - Commandes de liens (STORY-032/033)
 Route::resource('orders', OrderController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);

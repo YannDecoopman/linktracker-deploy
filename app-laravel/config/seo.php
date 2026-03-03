@@ -6,7 +6,7 @@ return [
     |--------------------------------------------------------------------------
     | Provider SEO actif
     |--------------------------------------------------------------------------
-    | Valeurs possibles : 'moz', 'custom'
+    | Valeurs possibles : 'dataforseo', 'moz', 'custom'
     | 'custom' = mode dégradé sans API (données nulles)
     */
     'provider' => env('SEO_PROVIDER', 'custom'),
@@ -19,6 +19,17 @@ return [
     */
     'moz_access_id'  => env('MOZ_ACCESS_ID', ''),
     'moz_secret_key' => env('MOZ_SECRET_KEY', ''),
+
+    /*
+    |--------------------------------------------------------------------------
+    | DataforSEO API
+    |--------------------------------------------------------------------------
+    | Credentials disponibles sur : https://app.dataforseo.com/api-access
+    | Stockés chiffrés en base (users.dataforseo_login_encrypted, etc.)
+    | Ces valeurs env sont un fallback pour les déploiements CI/config-driven.
+    */
+    'dataforseo_login'    => env('DATAFORSEO_LOGIN', ''),
+    'dataforseo_password' => env('DATAFORSEO_PASSWORD', ''),
 
     /*
     |--------------------------------------------------------------------------
