@@ -172,6 +172,85 @@ class SettingsController extends Controller
     }
 
     /**
+     * EPIC-015 : Sauvegarder les credentials des providers de réindexation.
+     */
+    public function updateIndexation(Request $request)
+    {
+        $validated = $request->validate([
+            'indexation_provider'     => ['required', 'in:speedyindex,omegaindexer,rocketindexer,ralfyindex'],
+            'speedyindex_api_key'     => ['nullable', 'string', 'max:500'],
+            'omegaindexer_api_key'    => ['nullable', 'string', 'max:500'],
+            'rocketindexer_api_key'   => ['nullable', 'string', 'max:500'],
+            'ralfyindex_api_key'      => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $updateData = ['indexation_provider' => $validated['indexation_provider']];
+
+        foreach (['speedyindex', 'omegaindexer', 'rocketindexer', 'ralfyindex'] as $provider) {
+            $key = $validated["{$provider}_api_key"] ?? null;
+            if (! empty($key)) {
+                $updateData["{$provider}_api_key_encrypted"] = Crypt::encryptString($key);
+            }
+        }
+
+        auth()->user()->update($updateData);
+
+        return back()->with('success', 'Configuration Indexation sauvegardée.');
+    }
+
+    /**
+     * EPIC-015 : Tester la connexion au provider de réindexation actif.
+     */
+    public function testIndexationConnection(Request $request)
+    {
+        $user = auth()->user();
+
+        $providerName = $user->indexation_provider ?? 'speedyindex';
+        $keyColumn    = "{$providerName}_api_key_encrypted";
+
+        if (empty($user->{$keyColumn})) {
+            return response()->json([
+                'success' => false,
+                'message' => "Aucune clé API configurée pour {$providerName}.",
+            ]);
+        }
+
+        try {
+            $apiKey   = Crypt::decryptString($user->{$keyColumn});
+            $service  = new \App\Services\Indexation\ReindexingService();
+            $provider = $service->getProvider();
+
+            if (! $provider->isAvailable()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Provider non disponible (clé API vide après déchiffrement).',
+                ]);
+            }
+
+            // Test léger : soumet une URL connue (google.com) pour valider la clé
+            $result = $provider->submitUrls(['https://www.google.com']);
+
+            if ($result->success) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Connexion réussie avec {$providerName} !",
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => "Erreur {$providerName} : " . ($result->error ?? 'Réponse inattendue.'),
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur : ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * STORY-068 : Tester la connexion DataforSEO.
      */
     public function testDataforSeoConnection(Request $request)

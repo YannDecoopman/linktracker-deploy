@@ -47,5 +47,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('seo-refresh', function (Request $request) {
             return Limit::perMinute(3)->by($request->user()?->id ?: $request->ip());
         });
+
+        // Soumission indexation : 5/min par utilisateur (appel API externe coûteux)
+        RateLimiter::for('indexation-submit', function (Request $request) {
+            return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
+        });
     }
 }

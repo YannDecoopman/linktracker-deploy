@@ -29,6 +29,11 @@
                     class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors">
                     DataforSEO
                 </button>
+                <button @click="activeTab = 'indexation'"
+                    :class="activeTab === 'indexation' ? 'border-brand-500 text-brand-600' : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'"
+                    class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors">
+                    Indexation
+                </button>
                 <a href="{{ route('settings.webhook') }}"
                     class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300 transition-colors">
                     Webhook
@@ -335,6 +340,103 @@
                         </form>
                     </div>
                 @endif
+            </div>
+        </div>
+
+        {{-- Onglet Indexation (EPIC-015) --}}
+        <div x-show="activeTab === 'indexation'" x-cloak
+             x-data="{
+                 showKeys: { speedyindex: false, omegaindexer: false, rocketindexer: false, ralfyindex: false },
+                 testResult: null, testSuccess: false,
+                 async testConnection() {
+                     this.testResult = null;
+                     const r = await fetch('{{ route('settings.indexation.test') }}', {
+                         method: 'POST',
+                         headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+                     });
+                     const d = await r.json();
+                     this.testSuccess = d.success;
+                     this.testResult = d.message;
+                 }
+             }">
+            <div class="bg-white rounded-lg border border-neutral-200 p-6 max-w-2xl">
+                <h2 class="text-base font-semibold text-neutral-900 mb-1">Providers de réindexation</h2>
+                <p class="text-sm text-neutral-500 mb-6">
+                    Configurez vos clés API pour soumettre vos backlinks aux services de réindexation.
+                    Le provider actif sera utilisé pour toutes les nouvelles campagnes.
+                </p>
+
+                <form method="POST" action="{{ route('settings.indexation') }}" class="space-y-6">
+                    @csrf
+                    @method('PATCH')
+
+                    {{-- Sélecteur provider actif --}}
+                    <div>
+                        <label class="block text-sm font-medium text-neutral-700 mb-3">Provider actif</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            @foreach(['speedyindex' => 'SpeedyIndex', 'omegaindexer' => 'OmegaIndexer', 'rocketindexer' => 'RocketIndexer', 'ralfyindex' => 'RalfyIndex'] as $slug => $label)
+                                <label class="relative flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors
+                                    {{ ($user->indexation_provider ?? 'speedyindex') === $slug ? 'border-brand-500 bg-brand-50' : 'border-neutral-200 hover:border-neutral-300' }}">
+                                    <input type="radio" name="indexation_provider" value="{{ $slug }}"
+                                        {{ ($user->indexation_provider ?? 'speedyindex') === $slug ? 'checked' : '' }}
+                                        class="sr-only">
+                                    <div class="w-3.5 h-3.5 rounded-full border-2 flex-shrink-0
+                                        {{ ($user->indexation_provider ?? 'speedyindex') === $slug ? 'border-brand-500 bg-brand-500' : 'border-neutral-300' }}"></div>
+                                    <span class="text-sm font-medium text-neutral-900">{{ $label }}</span>
+                                    @if(! empty($user->{"{$slug}_api_key_encrypted"}))
+                                        <span class="ml-auto text-xs text-green-600 font-medium">✓ Configuré</span>
+                                    @endif
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- Clés API --}}
+                    @foreach(['speedyindex' => 'SpeedyIndex', 'omegaindexer' => 'OmegaIndexer', 'rocketindexer' => 'RocketIndexer', 'ralfyindex' => 'RalfyIndex'] as $slug => $label)
+                        <div>
+                            <label class="block text-sm font-medium text-neutral-700 mb-1.5">
+                                Clé API {{ $label }}
+                            </label>
+                            <div class="flex gap-2">
+                                <input :type="showKeys.{{ $slug }} ? 'text' : 'password'"
+                                    name="{{ $slug }}_api_key"
+                                    placeholder="{{ ! empty($user->{"{$slug}_api_key_encrypted"}) ? '••••••••' : 'Entrez votre clé API' }}"
+                                    class="flex-1 px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm font-mono">
+                                <button type="button" @click="showKeys.{{ $slug }} = !showKeys.{{ $slug }}"
+                                    class="px-3 py-2 border border-neutral-300 rounded-lg text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50 text-sm">
+                                    <span x-text="showKeys.{{ $slug }} ? 'Masquer' : 'Afficher'"></span>
+                                </button>
+                            </div>
+                            @if(! empty($user->{"{$slug}_api_key_encrypted"}))
+                                <p class="mt-1 text-xs text-neutral-400">Clé déjà configurée — laissez vide pour conserver l'actuelle.</p>
+                            @endif
+                        </div>
+                    @endforeach
+
+                    <div class="flex items-center gap-3">
+                        <x-button type="submit" variant="primary">Sauvegarder</x-button>
+                        <button type="button" @click="testConnection()"
+                            class="px-4 py-2 border border-neutral-300 rounded-lg text-sm text-neutral-700 hover:bg-neutral-50 transition-colors">
+                            Tester le provider actif
+                        </button>
+                        <a href="{{ route('indexation.index') }}"
+                            class="px-4 py-2 text-sm text-brand-600 hover:text-brand-700 transition-colors">
+                            → Aller aux campagnes
+                        </a>
+                    </div>
+
+                    {{-- Résultat du test --}}
+                    <div x-show="testResult" x-transition class="p-3 rounded-lg text-sm"
+                        :class="testSuccess ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'">
+                        <span x-text="testResult"></span>
+                    </div>
+
+                    {{-- Note crédits DataForSEO --}}
+                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                        <strong>Note :</strong> La vérification d'indexation via DataForSEO SERP consomme des crédits
+                        (1 crédit/URL × 3 phases de check). Une campagne de 100 URLs ≈ 300 crédits SERP.
+                    </div>
+                </form>
             </div>
         </div>
 

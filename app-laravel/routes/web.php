@@ -10,6 +10,7 @@ use App\Http\Controllers\WebhookSettingsController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\IndexationController;
 use App\Http\Controllers\SourceDomainController;
 
 /*
@@ -103,6 +104,20 @@ Route::get('/domains', [SourceDomainController::class, 'index'])->name('domains.
 Route::post('/domains', [SourceDomainController::class, 'store'])->name('domains.store');
 Route::get('/domains/{domain}', [SourceDomainController::class, 'show'])->name('domains.show')->where('domain', '[a-z0-9\-\.]+');
 Route::post('/domains/{domain}/refresh-metrics', [SourceDomainController::class, 'refreshMetrics'])->name('domains.refresh-metrics')->middleware(['throttle:seo-refresh'])->where('domain', '[a-z0-9\-\.]+');
+
+// Indexation — Workflow de réindexation (EPIC-015)
+Route::get('/indexation', [IndexationController::class, 'index'])->name('indexation.index');
+Route::post('/indexation/campaigns', [IndexationController::class, 'store'])
+    ->name('indexation.campaigns.store')
+    ->middleware(['throttle:indexation-submit']);
+Route::get('/indexation/campaigns/{campaign}', [IndexationController::class, 'showCampaign'])
+    ->name('indexation.campaigns.show');
+Route::get('/indexation/campaigns/{campaign}/status', [IndexationController::class, 'campaignStatus'])
+    ->name('indexation.campaigns.status');
+
+// Settings Indexation (EPIC-015)
+Route::patch('/settings/indexation', [SettingsController::class, 'updateIndexation'])->name('settings.indexation');
+Route::post('/settings/indexation/test', [SettingsController::class, 'testIndexationConnection'])->name('settings.indexation.test');
 
 // Marketplace - Commandes de liens (STORY-032/033)
 Route::resource('orders', OrderController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);

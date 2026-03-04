@@ -129,6 +129,19 @@
             <span>Import CSV</span>
         </a>
 
+        {{-- Indexation (EPIC-015) --}}
+        @php $indexationActive = request()->is('indexation*'); @endphp
+        <a href="{{ route('indexation.index') }}"
+           @click="$dispatch('toggle-mobile-menu')"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150
+                  {{ $indexationActive ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white/80 hover:bg-white/5' }}">
+            <svg style="width:18px;height:18px" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                 class="{{ $indexationActive ? 'text-brand-400' : '' }}">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span>Indexation</span>
+        </a>
+
     </nav>
 
     {{-- Footer sidebar --}}
