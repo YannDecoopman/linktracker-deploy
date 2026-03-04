@@ -263,10 +263,15 @@ class BacklinkCsvImportService
                 default     => 'pending',
             };
 
-            // Indexed : "Yes" → true, "No" → false, vide → null
+            // Indexed : seul "Yes"/1 peut être importé comme true.
+            // "No" est ignoré (→ null) : seul CheckIndexationJob via DataForSEO peut confirmer is_indexed=false.
             $isIndexed = null;
             if (isset($raw['indexed']) && $raw['indexed'] !== '') {
-                $isIndexed = strtolower($raw['indexed']) === 'yes' || $raw['indexed'] === '1';
+                $val = strtolower($raw['indexed']);
+                if ($val === 'yes' || $val === '1') {
+                    $isIndexed = true;
+                }
+                // "no", "0", etc. → null (non déterminé, pas une confirmation de non-indexation)
             }
 
             $price = null;

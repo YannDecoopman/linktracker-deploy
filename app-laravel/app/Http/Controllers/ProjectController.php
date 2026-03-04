@@ -58,34 +58,32 @@ class ProjectController extends Controller
         $allBacklinks = $project->backlinks()->get();
 
         $stats = [
-            'total'            => $allBacklinks->count(),
-            'active'           => $allBacklinks->where('status', 'active')->count(),
-            'lost'             => $allBacklinks->where('status', 'lost')->count(),
-            'changed'          => $allBacklinks->where('status', 'changed')->count(),
-            'quality'          => $allBacklinks->where('status', 'active')->where('is_indexed', true)->where('is_dofollow', true)->count(),
-            'not_indexed'      => $allBacklinks->where('is_indexed', false)->count(),
-            'not_dofollow'     => $allBacklinks->where('is_dofollow', false)->count(),
-            'unknown_indexed'  => $allBacklinks->whereNull('is_indexed')->count(),
-            'budget_total'     => $allBacklinks->sum('price'),
-            'budget_active'    => $allBacklinks->where('status', 'active')->sum('price'),
+            'total'              => $allBacklinks->count(),
+            'active'             => $allBacklinks->where('status', 'active')->count(),
+            'lost'               => $allBacklinks->where('status', 'lost')->count(),
+            'changed'            => $allBacklinks->where('status', 'changed')->count(),
+            'pending'            => $allBacklinks->where('status', 'pending')->count(),
+            'quality'            => $allBacklinks->whereStrict('status', 'active')->whereStrict('is_indexed', true)->whereStrict('is_dofollow', true)->count(),
+            'not_indexed'        => $allBacklinks->whereStrict('is_indexed', false)->count(),
+            'not_dofollow'       => $allBacklinks->whereStrict('status', 'active')->whereStrict('http_status', 200)->whereStrict('is_dofollow', false)->count(),
+            'unknown_indexed'    => $allBacklinks->whereNull('is_indexed')->count(),
+            'pending_indexation' => $allBacklinks->whereIn('status', ['active', 'changed'])->whereNull('is_indexed')->count(),
+            'budget_total'       => $allBacklinks->sum('price'),
+            'budget_active'      => $allBacklinks->whereStrict('status', 'active')->sum('price'),
         ];
-
-        $stats['health_score'] = $stats['total'] > 0 ? (int) round(
-            ($stats['active'] / $stats['total']) * 60 +
-            ($stats['total'] > 0 && ($stats['total'] - $stats['unknown_indexed']) > 0
-                ? ($stats['quality'] / max(1, $stats['total'] - $stats['unknown_indexed'])) * 40
-                : 0)
-        ) : 0;
 
         // Tableau backlinks filtrable + paginé (même logique que BacklinkController@index)
         $validated = $request->validate([
-            'search'     => 'nullable|string|max:255',
-            'status'     => 'nullable|in:active,lost,changed',
-            'tier_level' => 'nullable|in:tier1,tier2',
-            'spot_type'  => 'nullable|in:external,internal',
-            'sort'       => 'nullable|in:created_at,source_url,status,tier_level,spot_type,last_checked_at',
-            'direction'  => 'nullable|in:asc,desc',
-            'per_page'   => 'nullable|integer|in:15,25,50,100',
+            'search'      => 'nullable|string|max:255',
+            'status'      => 'nullable|in:active,lost,changed,pending',
+            'tier_level'  => 'nullable|in:tier1,tier2',
+            'spot_type'   => 'nullable|in:external,internal',
+            'http_status' => 'nullable|string|max:10',
+            'is_dofollow' => 'nullable|in:1,0',
+            'is_indexed'  => 'nullable|in:1,0,null',
+            'sort'        => 'nullable|in:created_at,source_url,status,tier_level,spot_type,last_checked_at,http_status,is_dofollow,is_indexed',
+            'direction'   => 'nullable|in:asc,desc',
+            'per_page'    => 'nullable|integer|in:15,25,50,100',
         ]);
 
         $query = $project->backlinks()->with('project');
@@ -102,13 +100,27 @@ class ProjectController extends Controller
         if (!empty($validated['tier_level'])) { $query->where('tier_level', $validated['tier_level']); }
         if (!empty($validated['spot_type']))  { $query->where('spot_type', $validated['spot_type']); }
 
+        if (isset($validated['http_status']) && $validated['http_status'] !== '') {
+            $query->where('http_status', (int) $validated['http_status']);
+        }
+        if (isset($validated['is_dofollow']) && $validated['is_dofollow'] !== '') {
+            $query->where('is_dofollow', (bool) $validated['is_dofollow']);
+        }
+        if (isset($validated['is_indexed']) && $validated['is_indexed'] !== '') {
+            if ($validated['is_indexed'] === 'null') {
+                $query->whereNull('is_indexed');
+            } else {
+                $query->where('is_indexed', (bool) $validated['is_indexed']);
+            }
+        }
+
         $query->orderBy($validated['sort'] ?? 'created_at', $validated['direction'] ?? 'desc');
 
         $perPage = (int) ($validated['per_page'] ?? 15);
         $backlinks = $query->paginate($perPage)->withQueryString();
 
-        $activeFiltersCount = collect(['search', 'status', 'tier_level', 'spot_type'])
-            ->filter(fn($f) => !empty($validated[$f]))
+        $activeFiltersCount = collect(['search', 'status', 'tier_level', 'spot_type', 'http_status', 'is_dofollow', 'is_indexed'])
+            ->filter(fn($f) => isset($validated[$f]) && $validated[$f] !== '')
             ->count();
 
         return view('pages.projects.show', compact('project', 'stats', 'backlinks', 'activeFiltersCount'));
