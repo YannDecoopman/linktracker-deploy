@@ -87,11 +87,14 @@ class CheckBacklinkJob implements ShouldQueue
                 $updateData['is_dofollow'] = $result['is_dofollow'];
                 $updateData['http_status'] = $result['http_status'];
 
-                // Mettre à jour is_indexed uniquement si noindex explicitement détecté dans le HTML.
-                // Sans API (DataForSEO/GSC), on ne peut pas confirmer qu'une page est indexée —
-                // seulement qu'elle est explicitement bloquée.
+                // is_indexed : uniquement deux cas possibles sans API externe :
+                // - noindex détecté dans le HTML → false (bloqué explicitement)
+                // - pas de noindex + is_indexed était false (valeur CSV/manuelle) → null (non déterminé)
+                // On ne met jamais true sans API (DataForSEO/GSC).
                 if ($result['is_noindex'] === true) {
                     $updateData['is_indexed'] = false;
+                } elseif ($this->backlink->getRawOriginal('is_indexed') === 0) {
+                    $updateData['is_indexed'] = null;
                 }
 
                 // Si le backlink était perdu ou en attente (jamais vérifié), le remettre en actif

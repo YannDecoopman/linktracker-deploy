@@ -82,12 +82,15 @@
             {{-- Non indexés --}}
             <div class="bg-white rounded-xl border border-neutral-200 p-4">
                 <p class="text-xs text-neutral-400 mb-1">Non indexés</p>
-                <p class="text-2xl font-black {{ $stats['not_indexed'] > 0 ? 'text-amber-500' : 'text-neutral-900' }} tabular-nums">
-                    {{ $stats['not_indexed'] }}
+                <p class="text-2xl font-black {{ $stats['unknown_indexed'] > 0 ? 'text-amber-500' : 'text-neutral-900' }} tabular-nums">
+                    {{ $stats['unknown_indexed'] }}
                 </p>
-                @if($stats['unknown_indexed'] > 0)
-                    <p class="text-xs text-neutral-400 mt-1">+ {{ $stats['unknown_indexed'] }} inconnus</p>
-                @endif
+                <div class="flex flex-col gap-0.5 mt-1">
+                    <p class="text-xs text-neutral-400">à vérifier</p>
+                    @if($stats['not_indexed'] > 0)
+                        <p class="text-xs text-red-500 font-semibold">{{ $stats['not_indexed'] }} noindex confirmés</p>
+                    @endif
+                </div>
             </div>
 
             {{-- Nofollow --}}

@@ -383,6 +383,8 @@ class BacklinkController extends Controller
 
                 if ($result['is_noindex'] === true) {
                     $updateData['is_indexed'] = false;
+                } elseif ($backlink->getRawOriginal('is_indexed') === 0) {
+                    $updateData['is_indexed'] = null;
                 }
 
                 if ($backlink->status === 'lost') {
