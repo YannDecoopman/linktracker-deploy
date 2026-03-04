@@ -13,6 +13,9 @@ class BacklinkSnapshot extends Model
         'count_lost',
         'count_changed',
         'count_total',
+        'count_perfect',
+        'count_not_indexed',
+        'count_nofollow',
     ];
 
     protected $casts = [

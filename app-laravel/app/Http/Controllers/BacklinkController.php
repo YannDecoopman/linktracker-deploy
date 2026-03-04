@@ -365,6 +365,8 @@ class BacklinkController extends Controller
                 'checked_at'    => now(),
                 'is_present'    => $result['is_present'],
                 'http_status'   => $result['http_status'],
+                'anchor_text'   => $result['anchor_text'],
+                'rel_attributes'=> $result['rel_attributes'],
                 'error_message' => $result['error_message'],
             ]);
 
@@ -379,20 +381,34 @@ class BacklinkController extends Controller
                 $updateData['is_dofollow']    = $result['is_dofollow'];
                 $updateData['http_status']    = $result['http_status'];
 
+                if ($result['is_noindex'] === true) {
+                    $updateData['is_indexed'] = false;
+                }
+
                 if ($backlink->status === 'lost') {
                     $updateData['status'] = 'active';
                     $alertService->createBacklinkRecoveredAlert($backlink);
+                } elseif ($backlink->status === 'pending') {
+                    $updateData['status'] = 'active';
                 } elseif ($backlink->status === 'active') {
                     $changes = $this->getAttributesChanges($backlink, $result);
                     if (!empty($changes)) {
                         $updateData['status'] = 'changed';
                         $alertService->createBacklinkChangedAlert($backlink, $changes);
                     }
+                } elseif ($backlink->status === 'changed') {
+                    $changes = $this->getAttributesChanges($backlink, $result);
+                    if (empty($changes)) {
+                        $updateData['status'] = 'active';
+                    }
                 }
             } else {
+                $updateData['http_status'] = $result['http_status'];
                 if ($backlink->status !== 'lost') {
                     $updateData['status'] = 'lost';
-                    $alertService->createBacklinkLostAlert($backlink, $result['error_message']);
+                    if ($backlink->status !== 'pending') {
+                        $alertService->createBacklinkLostAlert($backlink, $result['error_message']);
+                    }
                 }
             }
 

@@ -585,7 +585,7 @@ function backlinkChart(projectId = null) {
                         },
                         {
                             label: 'Pertes',
-                            data: (data.lostDelta || data.lost || []).map(v => -v),
+                            data: (data.lostDelta || []).map(v => -v),
                             backgroundColor: 'rgba(248, 113, 113, 0.8)',
                             borderColor: 'rgba(239, 68, 68, 1)',
                             borderWidth: 1,

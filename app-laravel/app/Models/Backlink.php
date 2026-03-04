@@ -57,12 +57,12 @@ class Backlink extends Model
 
     /**
      * Accessor is_dofollow : retourne null si le backlink n'a jamais été vérifié
-     * (last_checked_at === null), sinon la valeur booléenne réelle.
-     * Cela évite d'afficher "DF" ou "NF" pour un lien jamais contrôlé.
+     * ou si le lien est perdu/en attente (impossible de confirmer l'état actuel).
      */
     public function getIsDofollowAttribute(?int $value): ?bool
     {
-        if ($this->attributes['last_checked_at'] === null) {
+        $status = $this->attributes['status'] ?? null;
+        if ($this->attributes['last_checked_at'] === null || in_array($status, ['pending', 'lost'])) {
             return null;
         }
         return (bool) $value;

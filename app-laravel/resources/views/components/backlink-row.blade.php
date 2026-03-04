@@ -80,9 +80,50 @@
 
     {{-- Statut --}}
     <td class="px-3 py-2 whitespace-nowrap">
-        <x-badge variant="{{ $backlink->status === 'active' ? 'success' : ($backlink->status === 'lost' ? 'danger' : 'warning') }}">
-            {{ $backlink->status === 'active' ? 'Actif' : ($backlink->status === 'lost' ? 'Perdu' : 'Modifié') }}
-        </x-badge>
+        @php
+            $statusVariant = match($backlink->status) {
+                'active'  => 'success',
+                'lost'    => 'danger',
+                'changed' => 'warning',
+                default   => 'neutral',
+            };
+            $statusLabel = match($backlink->status) {
+                'active'  => 'Actif',
+                'lost'    => 'Perdu',
+                'changed' => 'Modifié',
+                'pending' => 'En attente',
+                default   => $backlink->status,
+            };
+            $statusTooltip = match($backlink->status) {
+                'active'  => 'Le lien est présent sur la page source et pointe vers l\'URL cible.',
+                'lost'    => 'Le lien n\'a pas été trouvé lors du dernier check (page inaccessible ou lien supprimé).',
+                'changed' => 'L\'ancre, l\'URL cible ou l\'attribut rel a changé depuis le dernier check.',
+                'pending' => 'Jamais vérifié — en attente du premier check.',
+                default   => '',
+            };
+        @endphp
+        <span title="{{ $statusTooltip }}" class="cursor-help">
+            <x-badge variant="{{ $statusVariant }}">{{ $statusLabel }}</x-badge>
+        </span>
+    </td>
+
+    {{-- HTTP Status --}}
+    <td class="px-3 py-2 text-center whitespace-nowrap">
+        @if($backlink->http_status)
+            @php
+                $httpColor = match(true) {
+                    $backlink->http_status >= 200 && $backlink->http_status < 300 => 'text-emerald-600',
+                    $backlink->http_status >= 300 && $backlink->http_status < 400 => 'text-amber-500',
+                    default => 'text-red-500',
+                };
+            @endphp
+            <span class="text-xs font-mono font-semibold {{ $httpColor }}"
+                  title="Code HTTP retourné lors du dernier check">
+                {{ $backlink->http_status }}
+            </span>
+        @else
+            <span class="text-neutral-300 text-xs">—</span>
+        @endif
     </td>
 
     {{-- Dofollow --}}

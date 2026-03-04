@@ -66,6 +66,8 @@ class CheckBacklinkJob implements ShouldQueue
                 'checked_at' => now(),
                 'is_present' => $result['is_present'],
                 'http_status' => $result['http_status'],
+                'anchor_text' => $result['anchor_text'],
+                'rel_attributes' => $result['rel_attributes'],
                 'error_message' => $result['error_message'],
             ]);
 
@@ -84,6 +86,13 @@ class CheckBacklinkJob implements ShouldQueue
                 $updateData['rel_attributes'] = $result['rel_attributes'];
                 $updateData['is_dofollow'] = $result['is_dofollow'];
                 $updateData['http_status'] = $result['http_status'];
+
+                // Mettre à jour is_indexed uniquement si noindex explicitement détecté dans le HTML.
+                // Sans API (DataForSEO/GSC), on ne peut pas confirmer qu'une page est indexée —
+                // seulement qu'elle est explicitement bloquée.
+                if ($result['is_noindex'] === true) {
+                    $updateData['is_indexed'] = false;
+                }
 
                 // Si le backlink était perdu ou en attente (jamais vérifié), le remettre en actif
                 if ($this->backlink->status === 'lost') {
@@ -112,6 +121,16 @@ class CheckBacklinkJob implements ShouldQueue
 
                         // Créer une alerte de modification
                         $alertService->createBacklinkChangedAlert($this->backlink, $changes);
+                    }
+
+                } elseif ($this->backlink->status === 'changed') {
+                    // Vérifier si les attributs sont revenus à la normale
+                    $changes = $this->getAttributesChanges($result);
+                    if (empty($changes)) {
+                        $updateData['status'] = 'active';
+                        Log::info('Attributs du backlink normalisés - changement de statut changed → active', [
+                            'backlink_id' => $this->backlink->id,
+                        ]);
                     }
                 }
             } else {
