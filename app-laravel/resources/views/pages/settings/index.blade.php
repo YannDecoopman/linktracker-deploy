@@ -346,17 +346,23 @@
         {{-- Onglet Indexation (EPIC-015) --}}
         <div x-show="activeTab === 'indexation'" x-cloak
              x-data="{
+                 activeProvider: '{{ $user->indexation_provider ?? 'speedyindex' }}',
                  showKeys: { speedyindex: false, omegaindexer: false, rocketindexer: false, ralfyindex: false },
                  testResult: null, testSuccess: false,
                  async testConnection() {
-                     this.testResult = null;
-                     const r = await fetch('{{ route('settings.indexation.test') }}', {
-                         method: 'POST',
-                         headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
-                     });
-                     const d = await r.json();
-                     this.testSuccess = d.success;
-                     this.testResult = d.message;
+                     this.testResult = 'Test en cours…';
+                     this.testSuccess = false;
+                     try {
+                         const r = await fetch('{{ route('settings.indexation.test') }}', {
+                             method: 'POST',
+                             headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+                         });
+                         const d = await r.json();
+                         this.testSuccess = d.success;
+                         this.testResult = d.message;
+                     } catch (e) {
+                         this.testResult = 'Erreur de connexion.';
+                     }
                  }
              }">
             <div class="bg-white rounded-lg border border-neutral-200 p-6 max-w-2xl">
@@ -375,13 +381,14 @@
                         <label class="block text-sm font-medium text-neutral-700 mb-3">Provider actif</label>
                         <div class="grid grid-cols-2 gap-3">
                             @foreach(['speedyindex' => 'SpeedyIndex', 'omegaindexer' => 'OmegaIndexer', 'rocketindexer' => 'RocketIndexer', 'ralfyindex' => 'RalfyIndex'] as $slug => $label)
-                                <label class="relative flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors
-                                    {{ ($user->indexation_provider ?? 'speedyindex') === $slug ? 'border-brand-500 bg-brand-50' : 'border-neutral-200 hover:border-neutral-300' }}">
+                                <label @click="activeProvider = '{{ $slug }}'"
+                                    :class="activeProvider === '{{ $slug }}' ? 'border-brand-500 bg-brand-50' : 'border-neutral-200 hover:border-neutral-300'"
+                                    class="relative flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors">
                                     <input type="radio" name="indexation_provider" value="{{ $slug }}"
-                                        {{ ($user->indexation_provider ?? 'speedyindex') === $slug ? 'checked' : '' }}
+                                        x-model="activeProvider"
                                         class="sr-only">
-                                    <div class="w-3.5 h-3.5 rounded-full border-2 flex-shrink-0
-                                        {{ ($user->indexation_provider ?? 'speedyindex') === $slug ? 'border-brand-500 bg-brand-500' : 'border-neutral-300' }}"></div>
+                                    <div :class="activeProvider === '{{ $slug }}' ? 'border-brand-500 bg-brand-500' : 'border-neutral-300'"
+                                        class="w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 transition-colors"></div>
                                     <span class="text-sm font-medium text-neutral-900">{{ $label }}</span>
                                     @if(! empty($user->{"{$slug}_api_key_encrypted"}))
                                         <span class="ml-auto text-xs text-green-600 font-medium">✓ Configuré</span>
@@ -398,13 +405,13 @@
                                 Clé API {{ $label }}
                             </label>
                             <div class="flex gap-2">
-                                <input :type="showKeys.{{ $slug }} ? 'text' : 'password'"
+                                <input :type="showKeys['{{ $slug }}'] ? 'text' : 'password'"
                                     name="{{ $slug }}_api_key"
                                     placeholder="{{ ! empty($user->{"{$slug}_api_key_encrypted"}) ? '••••••••' : 'Entrez votre clé API' }}"
                                     class="flex-1 px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm font-mono">
-                                <button type="button" @click="showKeys.{{ $slug }} = !showKeys.{{ $slug }}"
+                                <button type="button" @click="showKeys['{{ $slug }}'] = !showKeys['{{ $slug }}']"
                                     class="px-3 py-2 border border-neutral-300 rounded-lg text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50 text-sm">
-                                    <span x-text="showKeys.{{ $slug }} ? 'Masquer' : 'Afficher'"></span>
+                                    <span x-text="showKeys['{{ $slug }}'] ? 'Masquer' : 'Afficher'"></span>
                                 </button>
                             </div>
                             @if(! empty($user->{"{$slug}_api_key_encrypted"}))
@@ -434,7 +441,7 @@
                     {{-- Note crédits DataForSEO --}}
                     <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
                         <strong>Note :</strong> La vérification d'indexation via DataForSEO SERP consomme des crédits
-                        (1 crédit/URL × 3 phases de check). Une campagne de 100 URLs ≈ 300 crédits SERP.
+                        (1 crédit/URL, check unique à 7 jours). Une campagne de 100 URLs ≈ 100 crédits SERP.
                     </div>
                 </form>
             </div>

@@ -15,8 +15,6 @@ class IndexationSubmission extends Model
         'provider_response',
         'provider_task_id',
         'submitted_at',
-        'check_24h_at',
-        'check_48h_at',
         'check_7d_at',
         'indexed_at',
         'last_check_result',
@@ -28,8 +26,6 @@ class IndexationSubmission extends Model
         'provider_response' => 'array',
         'last_check_result' => 'boolean',
         'submitted_at'      => 'datetime',
-        'check_24h_at'      => 'datetime',
-        'check_48h_at'      => 'datetime',
         'check_7d_at'       => 'datetime',
         'indexed_at'        => 'datetime',
         'last_checked_at'   => 'datetime',
@@ -45,16 +41,7 @@ class IndexationSubmission extends Model
         return $this->belongsTo(Backlink::class);
     }
 
-    public function getCheckProgressAttribute(): array
-    {
-        return [
-            '24h' => ! is_null($this->check_24h_at),
-            '48h' => ! is_null($this->check_48h_at),
-            '7d'  => ! is_null($this->check_7d_at),
-        ];
-    }
-
-    public function getStatusLabelAttribute(): string
+public function getStatusLabelAttribute(): string
     {
         return match ($this->submission_status) {
             'pending'      => 'En attente',

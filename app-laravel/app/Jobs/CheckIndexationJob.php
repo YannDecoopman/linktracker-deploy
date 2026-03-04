@@ -20,48 +20,32 @@ class CheckIndexationJob implements ShouldQueue
     public int $tries   = 3;
     public int $timeout = 120;
 
-    /**
-     * @param  string $checkPhase  '24h' | '48h' | '7d'
-     */
     public function __construct(
         public readonly IndexationCampaign $campaign,
-        public readonly string             $checkPhase,
     ) {
         $this->onQueue('default');
     }
 
     public function handle(): void
     {
-        $checkedAtColumn = match ($this->checkPhase) {
-            '24h'   => 'check_24h_at',
-            '48h'   => 'check_48h_at',
-            '7d'    => 'check_7d_at',
-            default => throw new \InvalidArgumentException("Phase inconnue : {$this->checkPhase}"),
-        };
-
         Log::info('CheckIndexationJob: starting', [
             'campaign_id' => $this->campaign->id,
-            'phase'       => $this->checkPhase,
         ]);
 
-        // Récupère les soumissions à vérifier pour cette phase
         $submissions = $this->campaign->submissions()
             ->where('submission_status', 'submitted')
-            ->whereNull($checkedAtColumn)
+            ->whereNull('check_7d_at')
             ->get();
 
         if ($submissions->isEmpty()) {
             Log::info('CheckIndexationJob: no submissions to check', [
                 'campaign_id' => $this->campaign->id,
-                'phase'       => $this->checkPhase,
             ]);
 
-            if ($this->checkPhase === '7d') {
-                $this->campaign->update([
-                    'status'       => 'completed',
-                    'completed_at' => now(),
-                ]);
-            }
+            $this->campaign->update([
+                'status'       => 'completed',
+                'completed_at' => now(),
+            ]);
 
             return;
         }
@@ -74,59 +58,46 @@ class CheckIndexationJob implements ShouldQueue
         foreach ($submissions as $submission) {
             $isIndexed  = $results[$submission->source_url] ?? null;
             $updateData = [
-                $checkedAtColumn    => $now,
+                'check_7d_at'       => $now,
                 'last_checked_at'   => $now,
                 'last_check_result' => $isIndexed,
+                'submission_status' => $isIndexed === true ? 'indexed' : 'not_indexed',
             ];
 
             if ($isIndexed === true && is_null($submission->indexed_at)) {
-                // Première confirmation positive → mise à jour du backlink
-                $updateData['indexed_at']        = $now;
-                $updateData['submission_status'] = 'indexed';
+                $updateData['indexed_at'] = $now;
                 $indexedNow++;
 
                 if ($submission->backlink_id) {
                     Backlink::where('id', $submission->backlink_id)
                         ->update(['is_indexed' => true]);
                 }
-            } elseif ($isIndexed === false && $this->checkPhase === '7d') {
-                // Après 7 jours, toujours pas indexé → statut final
-                $updateData['submission_status'] = 'not_indexed';
             }
-            // null = erreur check DataForSEO → on garde 'submitted' pour ne pas bloquer les phases suivantes
 
+            // null = erreur DataForSEO → on considère not_indexed mais on ne bloque pas
             $submission->update($updateData);
         }
 
-        // Recalcule le compteur total indexé depuis la DB
         $totalIndexed = $this->campaign->submissions()
             ->where('submission_status', 'indexed')
             ->count();
 
-        $this->campaign->update(['indexed_count' => $totalIndexed]);
-
-        // Clôture de la campagne après le check final
-        if ($this->checkPhase === '7d') {
-            $this->campaign->update([
-                'status'       => 'completed',
-                'completed_at' => $now,
-            ]);
-        }
+        $this->campaign->update([
+            'indexed_count' => $totalIndexed,
+            'status'        => 'completed',
+            'completed_at'  => $now,
+        ]);
 
         Log::info('CheckIndexationJob: done', [
-            'campaign_id'  => $this->campaign->id,
-            'phase'        => $this->checkPhase,
-            'checked'      => count($urls),
-            'indexed_now'  => $indexedNow,
+            'campaign_id'   => $this->campaign->id,
+            'checked'       => count($urls),
+            'indexed_now'   => $indexedNow,
             'total_indexed' => $totalIndexed,
         ]);
     }
 
     /**
      * Vérifie l'indexation Google via DataForSEO SERP "site:url".
-     *
-     * NOTE : chaque vérification consomme des crédits DataForSEO.
-     * Une campagne de N URLs × 3 phases = 3N appels SERP.
      *
      * @param  array<string> $urls
      * @return array<string, bool|null>  ['url' => true|false|null]
@@ -178,8 +149,6 @@ class CheckIndexationJob implements ShouldQueue
     }
 
     /**
-     * Résout les credentials DataForSEO (user DB → fallback env).
-     *
      * @return array{0: string, 1: string}  [login, password]
      */
     private function resolveDataForSeoCredentials(): array
@@ -208,7 +177,6 @@ class CheckIndexationJob implements ShouldQueue
     {
         Log::error('CheckIndexationJob: failed after retries', [
             'campaign_id' => $this->campaign->id,
-            'phase'       => $this->checkPhase,
             'error'       => $e->getMessage(),
         ]);
     }

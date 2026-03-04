@@ -132,16 +132,12 @@
 
         {{-- Tableau des soumissions --}}
         <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-            <div class="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
+            <div class="px-5 py-4 border-b border-neutral-100">
                 <h3 class="text-sm font-semibold text-neutral-900">
                     Soumissions
                     <span class="ml-1.5 text-neutral-400 font-normal">({{ $submissions->total() }})</span>
                 </h3>
-                <div class="flex items-center gap-3 text-xs text-neutral-500">
-                    <span>Checks : 24h</span>
-                    <span>48h</span>
-                    <span>7j</span>
-                </div>
+                <p class="text-xs text-neutral-400 mt-0.5">Vérification d'indexation via DataForSEO après 7 jours.</p>
             </div>
 
             <div class="overflow-x-auto">
@@ -150,10 +146,8 @@
                         <tr>
                             <th class="px-5 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">URL Source</th>
                             <th class="px-5 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Statut</th>
-                            <th class="px-5 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Soumis</th>
-                            <th class="px-5 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">24h</th>
-                            <th class="px-5 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">48h</th>
-                            <th class="px-5 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">7j</th>
+                            <th class="px-5 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Soumis le</th>
+                            <th class="px-5 py-3 text-center text-xs font-medium text-neutral-500 uppercase tracking-wider">Check 7j</th>
                             <th class="px-5 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Indexé le</th>
                         </tr>
                     </thead>
@@ -196,28 +190,12 @@
                                     {{ $submission->submitted_at?->format('d/m H:i') ?? '—' }}
                                 </td>
                                 <td class="px-5 py-3 text-center">
-                                    @if($submission->check_24h_at)
-                                        @if($submission->last_check_result === true && $submission->indexed_at && $submission->check_24h_at >= $submission->indexed_at->subMinutes(5))
-                                            <span class="inline-block w-5 h-5 rounded-full bg-green-100 text-green-600 text-xs flex items-center justify-center font-bold">✓</span>
-                                        @elseif($submission->check_24h_at)
-                                            <span class="inline-block w-5 h-5 rounded-full bg-neutral-100 text-neutral-400 text-xs flex items-center justify-center">—</span>
-                                        @endif
-                                    @else
-                                        <span class="inline-block w-2 h-2 rounded-full bg-neutral-200 mx-auto"></span>
-                                    @endif
-                                </td>
-                                <td class="px-5 py-3 text-center">
-                                    @if($submission->check_48h_at)
-                                        <span class="inline-block w-5 h-5 rounded-full bg-neutral-100 text-neutral-400 text-xs flex items-center justify-center">—</span>
-                                    @else
-                                        <span class="inline-block w-2 h-2 rounded-full bg-neutral-200 mx-auto"></span>
-                                    @endif
-                                </td>
-                                <td class="px-5 py-3 text-center">
                                     @if($submission->check_7d_at)
-                                        <span class="inline-block w-5 h-5 rounded-full bg-neutral-100 text-neutral-400 text-xs flex items-center justify-center">—</span>
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full {{ $submission->submission_status === 'indexed' ? 'bg-green-100 text-green-600' : 'bg-neutral-100 text-neutral-400' }} text-xs font-bold">
+                                            {{ $submission->submission_status === 'indexed' ? '✓' : '✗' }}
+                                        </span>
                                     @else
-                                        <span class="inline-block w-2 h-2 rounded-full bg-neutral-200 mx-auto"></span>
+                                        <span class="inline-block w-2 h-2 rounded-full bg-neutral-200 mx-auto" title="En attente du check"></span>
                                     @endif
                                 </td>
                                 <td class="px-5 py-3 text-xs text-green-600 font-medium">
@@ -226,7 +204,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-5 py-10 text-center text-sm text-neutral-400">
+                                <td colspan="5" class="px-5 py-10 text-center text-sm text-neutral-400">
                                     Aucune soumission trouvée.
                                 </td>
                             </tr>

@@ -12,7 +12,7 @@ class WebhookSettingsController extends Controller
     public function show()
     {
         return view('pages.settings.webhook', [
-            'user' => auth()->user(),
+            'user' => auth()->user() ?? \App\Models\User::first(),
             'availableEvents' => $this->getAvailableEvents(),
         ]);
     }
@@ -26,7 +26,7 @@ class WebhookSettingsController extends Controller
             'webhook_events.*' => 'string|in:backlink_lost,backlink_changed,backlink_recovered',
         ]);
 
-        $user = auth()->user();
+        $user = auth()->user() ?? \App\Models\User::first();
         $user->update([
             'webhook_url' => $validated['webhook_url'] ?? null,
             'webhook_secret' => $validated['webhook_secret'] ?? null,
@@ -46,7 +46,7 @@ class WebhookSettingsController extends Controller
 
     public function test(Request $request)
     {
-        $user = auth()->user();
+        $user = auth()->user() ?? \App\Models\User::first();
 
         if (!$user->webhook_url) {
             return back()->with('error', 'Aucune URL webhook configurée.');

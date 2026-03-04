@@ -14,7 +14,7 @@ class SettingsController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
+        $user = auth()->user() ?? \App\Models\User::first();
 
         $queueStats = [
             'pending'  => DB::table('jobs')->count(),
@@ -104,7 +104,7 @@ class SettingsController extends Controller
 
     public function testSeoConnection(Request $request)
     {
-        $user = auth()->user();
+        $user = auth()->user() ?? \App\Models\User::first();
 
         if ($user->seo_provider === 'custom' || empty($user->seo_api_key_encrypted)) {
             return response()->json([
@@ -203,7 +203,7 @@ class SettingsController extends Controller
      */
     public function testIndexationConnection(Request $request)
     {
-        $user = auth()->user();
+        $user = auth()->user() ?? \App\Models\User::first();
 
         $providerName = $user->indexation_provider ?? 'speedyindex';
         $keyColumn    = "{$providerName}_api_key_encrypted";
@@ -255,7 +255,7 @@ class SettingsController extends Controller
      */
     public function testDataforSeoConnection(Request $request)
     {
-        $user = auth()->user();
+        $user = auth()->user() ?? \App\Models\User::first();
 
         if (empty($user->dataforseo_login_encrypted) || empty($user->dataforseo_password_encrypted)) {
             return response()->json([

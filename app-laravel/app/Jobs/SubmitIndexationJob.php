@@ -87,13 +87,11 @@ class SubmitIndexationJob implements ShouldQueue
             'submitted_at'    => now(),
         ]);
 
-        // Dispatch les 3 vérifications différées pour les soumissions réussies
+        // Dispatch la vérification différée à 7 jours pour les soumissions réussies
         if ($submitted > 0) {
-            CheckIndexationJob::dispatch($this->campaign, '24h')->delay(now()->addHours(24));
-            CheckIndexationJob::dispatch($this->campaign, '48h')->delay(now()->addHours(48));
-            CheckIndexationJob::dispatch($this->campaign, '7d')->delay(now()->addDays(7));
+            CheckIndexationJob::dispatch($this->campaign)->delay(now()->addDays(7));
 
-            Log::info('SubmitIndexationJob: checks scheduled', [
+            Log::info('SubmitIndexationJob: check scheduled at 7d', [
                 'campaign_id' => $this->campaign->id,
                 'submitted'   => $submitted,
             ]);
