@@ -73,10 +73,13 @@
         {{-- Non indexés --}}
         <div class="bg-white rounded-xl border border-neutral-200 p-4">
             <p class="text-xs text-neutral-400 mb-1">Non indexés</p>
-            <p class="text-2xl font-black {{ ($notIndexed ?? 0) > 0 ? 'text-amber-500' : 'text-neutral-900' }} tabular-nums">{{ $notIndexed ?? 0 }}</p>
-            @if(($unknownIndexed ?? 0) > 0)
-                <p class="text-xs text-neutral-400 mt-1">+ {{ $unknownIndexed }} inconnus</p>
-            @endif
+            <p class="text-2xl font-black {{ ($unknownIndexed ?? 0) > 0 ? 'text-amber-500' : 'text-neutral-900' }} tabular-nums">{{ $unknownIndexed ?? 0 }}</p>
+            <div class="flex flex-col gap-0.5 mt-1">
+                <p class="text-xs text-neutral-400">à vérifier</p>
+                @if(($notIndexed ?? 0) > 0)
+                    <p class="text-xs text-red-500 font-semibold">{{ $notIndexed }} noindex confirmés</p>
+                @endif
+            </div>
         </div>
 
         {{-- Nofollow --}}
@@ -585,7 +588,7 @@ function backlinkChart(projectId = null) {
                         },
                         {
                             label: 'Pertes',
-                            data: (data.lostDelta || data.lost || []).map(v => -v),
+                            data: (data.lostDelta || []).map(v => -v),
                             backgroundColor: 'rgba(248, 113, 113, 0.8)',
                             borderColor: 'rgba(239, 68, 68, 1)',
                             borderWidth: 1,

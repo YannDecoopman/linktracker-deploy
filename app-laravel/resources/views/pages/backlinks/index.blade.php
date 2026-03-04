@@ -177,6 +177,7 @@
                             <x-sortable-header field="tier_level" label="Tier" class="px-3 py-2" />
                             <x-sortable-header field="spot_type" label="Réseau" class="px-3 py-2" />
                             <x-sortable-header field="status" label="Statut" class="px-3 py-2" />
+                            <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase whitespace-nowrap" title="Code HTTP retourné lors du dernier check">HTTP</th>
                             <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase">DF</th>
                             <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase">Idx</th>
                             <th class="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase whitespace-nowrap">Prix</th>

@@ -58,12 +58,15 @@ class SnapshotBacklinksCommand extends Command
             ->delete();
 
         BacklinkSnapshot::create([
-            'snapshot_date' => $date,
-            'project_id'    => $projectId,
-            'count_active'  => (clone $query)->where('status', 'active')->count(),
-            'count_lost'    => (clone $query)->where('status', 'lost')->count(),
-            'count_changed' => (clone $query)->where('status', 'changed')->count(),
-            'count_total'   => (clone $query)->count(),
+            'snapshot_date'    => $date,
+            'project_id'       => $projectId,
+            'count_active'     => (clone $query)->where('status', 'active')->count(),
+            'count_lost'       => (clone $query)->where('status', 'lost')->count(),
+            'count_changed'    => (clone $query)->where('status', 'changed')->count(),
+            'count_total'      => (clone $query)->count(),
+            'count_perfect'    => (clone $query)->where('status', 'active')->where('is_indexed', true)->where('is_dofollow', true)->count(),
+            'count_not_indexed'=> (clone $query)->where('is_indexed', false)->count(),
+            'count_nofollow'   => (clone $query)->where('is_dofollow', false)->count(),
         ]);
     }
 

@@ -39,6 +39,7 @@ class BacklinkCheckerService
             'anchor_text' => null,
             'rel_attributes' => null,
             'is_dofollow' => false,
+            'is_noindex' => null,
             'error_message' => null,
         ];
 
@@ -61,6 +62,10 @@ class BacklinkCheckerService
 
             // 4. Analyser le HTML pour trouver le backlink
             $html = $response->body();
+
+            // Détecter noindex dans les meta robots
+            $result['is_noindex'] = $this->detectNoindex($html);
+
             $linkData = $this->findLinkInHtml($html, $backlink->target_url);
 
             if ($linkData) {
@@ -144,6 +149,41 @@ class BacklinkCheckerService
 
         libxml_clear_errors();
         return null;
+    }
+
+    /**
+     * Détecte si la page contient une directive noindex dans les meta robots
+     * Retourne true si noindex détecté, false si index explicite, null si aucune meta robots
+     */
+    protected function detectNoindex(string $html): ?bool
+    {
+        libxml_use_internal_errors(true);
+        $dom = new DOMDocument();
+        $html = mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8');
+        if (!@$dom->loadHTML($html)) {
+            libxml_clear_errors();
+            return null;
+        }
+
+        $xpath = new DOMXPath($dom);
+
+        // Cherche <meta name="robots" content="..."> (et variantes googlebot, etc.)
+        $metaNodes = $xpath->query('//meta[translate(@name, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")="robots" or translate(@name, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")="googlebot"]');
+
+        libxml_clear_errors();
+
+        if (!$metaNodes || $metaNodes->length === 0) {
+            return null; // Pas de meta robots = on ne sait pas
+        }
+
+        foreach ($metaNodes as $meta) {
+            $content = strtolower($meta->getAttribute('content'));
+            if (str_contains($content, 'noindex')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

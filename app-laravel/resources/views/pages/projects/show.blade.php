@@ -82,12 +82,15 @@
             {{-- Non indexés --}}
             <div class="bg-white rounded-xl border border-neutral-200 p-4">
                 <p class="text-xs text-neutral-400 mb-1">Non indexés</p>
-                <p class="text-2xl font-black {{ $stats['not_indexed'] > 0 ? 'text-amber-500' : 'text-neutral-900' }} tabular-nums">
-                    {{ $stats['not_indexed'] }}
+                <p class="text-2xl font-black {{ $stats['unknown_indexed'] > 0 ? 'text-amber-500' : 'text-neutral-900' }} tabular-nums">
+                    {{ $stats['unknown_indexed'] }}
                 </p>
-                @if($stats['unknown_indexed'] > 0)
-                    <p class="text-xs text-neutral-400 mt-1">+ {{ $stats['unknown_indexed'] }} inconnus</p>
-                @endif
+                <div class="flex flex-col gap-0.5 mt-1">
+                    <p class="text-xs text-neutral-400">à vérifier</p>
+                    @if($stats['not_indexed'] > 0)
+                        <p class="text-xs text-red-500 font-semibold">{{ $stats['not_indexed'] }} noindex confirmés</p>
+                    @endif
+                </div>
             </div>
 
             {{-- Nofollow --}}
@@ -342,6 +345,7 @@
                             <x-sortable-header field="tier_level" label="Tier" class="px-3 py-2" :route="route('projects.show', $project)" />
                             <x-sortable-header field="spot_type" label="Réseau" class="px-3 py-2" :route="route('projects.show', $project)" />
                             <x-sortable-header field="status" label="Statut" class="px-3 py-2" :route="route('projects.show', $project)" />
+                            <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase whitespace-nowrap" title="Code HTTP retourné lors du dernier check">HTTP</th>
                             <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase">DF</th>
                             <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase">Idx</th>
                             <th class="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase whitespace-nowrap">Prix</th>
@@ -496,7 +500,7 @@ function backlinkChart(projectId) {
                 data: {
                     labels: data.labels,
                     datasets: [
-                        { label: 'Total', data: data.active || [], borderColor: 'rgba(59,130,246,0.9)', backgroundColor: 'rgba(59,130,246,0.06)', borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 4, tension: 0.4, fill: true, hidden: !this.t0 },
+                        { label: 'Total', data: data.total || [], borderColor: 'rgba(59,130,246,0.9)', backgroundColor: 'rgba(59,130,246,0.06)', borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 4, tension: 0.4, fill: true, hidden: !this.t0 },
                         { label: 'Parfaits', data: data.perfect || [], borderColor: 'rgba(16,185,129,0.9)', backgroundColor: 'rgba(16,185,129,0.05)', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.4, fill: false, hidden: !this.t1 },
                         { label: 'Non indexés', data: data.not_indexed || [], borderColor: 'rgba(245,158,11,0.9)', backgroundColor: 'transparent', borderWidth: 2, borderDash: [4, 3], pointRadius: 0, pointHoverRadius: 4, tension: 0.4, fill: false, hidden: !this.t2 },
                         { label: 'Nofollow', data: data.nofollow || [], borderColor: 'rgba(139,92,246,0.9)', backgroundColor: 'transparent', borderWidth: 2, borderDash: [4, 3], pointRadius: 0, pointHoverRadius: 4, tension: 0.4, fill: false, hidden: !this.t3 },
@@ -531,7 +535,7 @@ function backlinkChart(projectId) {
                     labels: data.labels,
                     datasets: [
                         { label: 'Gains', data: data.gained || [], backgroundColor: 'rgba(52,211,153,0.8)', borderColor: 'rgba(16,185,129,1)', borderWidth: 1, borderRadius: 3, borderSkipped: false },
-                        { label: 'Pertes', data: (data.lost || []).map(v => -v), backgroundColor: 'rgba(248,113,113,0.8)', borderColor: 'rgba(239,68,68,1)', borderWidth: 1, borderRadius: 3, borderSkipped: false },
+                        { label: 'Pertes', data: (data.lostDelta || []).map(v => -v), backgroundColor: 'rgba(248,113,113,0.8)', borderColor: 'rgba(239,68,68,1)', borderWidth: 1, borderRadius: 3, borderSkipped: false },
                     ],
                 },
                 options: {

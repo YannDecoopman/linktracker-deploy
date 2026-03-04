@@ -21,15 +21,9 @@ class SourceDomainController extends Controller
         $daMin    = $request->get('da_min');
         $daMax    = $request->get('da_max');
         $spamMax  = $request->get('spam_max');
-        $sort     = in_array($request->get('sort'), ['domain', 'da', 'dr', 'spam_score', 'backlinks_count', 'first_seen_at']) ? $request->get('sort') : 'domain';
+        $sort     = in_array($request->get('sort'), ['domain', 'da', 'dr', 'spam_score', 'referring_domains_count', 'first_seen_at', 'backlinks_count', 'projects_count']) ? $request->get('sort') : 'domain';
         $dir      = $request->get('direction', 'asc') === 'desc' ? 'desc' : 'asc';
 
-        $query = SourceDomain::with('domainMetric')
-            ->withCount(['domainMetric as backlinks_total' => function ($q) {
-                // Nombre de backlinks via jointure SQL directe
-            }]);
-
-        // On va faire une requête avec JOIN pour les counts et le tri par métriques
         $query = SourceDomain::query()
             ->leftJoin('domain_metrics', 'domain_metrics.domain', '=', 'source_domains.domain')
             ->select(
@@ -39,6 +33,8 @@ class SourceDomainController extends Controller
                 'domain_metrics.spam_score',
                 'domain_metrics.referring_domains_count',
                 'domain_metrics.last_updated_at as metrics_updated_at',
+                \Illuminate\Support\Facades\DB::raw('(SELECT COUNT(*) FROM backlinks WHERE backlinks.source_url LIKE "%"||source_domains.domain||"%") as backlinks_count'),
+                \Illuminate\Support\Facades\DB::raw('(SELECT COUNT(DISTINCT project_id) FROM backlinks WHERE backlinks.source_url LIKE "%"||source_domains.domain||"%") as projects_count'),
             );
 
         if ($search) {
@@ -60,29 +56,17 @@ class SourceDomainController extends Controller
         // Tri
         $sortColumn = match ($sort) {
             'da', 'dr', 'spam_score', 'referring_domains_count' => "domain_metrics.{$sort}",
-            default => "source_domains.{$sort}",
+            'backlinks_count', 'projects_count'                  => $sort,
+            'first_seen_at'                                      => "source_domains.first_seen_at",
+            default                                              => "source_domains.{$sort}",
         };
-        $query->orderBy($sortColumn, $dir)->orderBy('source_domains.domain', 'asc');
+        $query->orderByRaw("{$sortColumn} IS NULL ASC")->orderBy($sortColumn, $dir)->orderBy('source_domains.domain', 'asc');
 
         $domains = $query->paginate(25)->withQueryString();
 
-        // Injecter le nombre de backlinks et de projets distincts pour chaque domaine
-        $domainNames = $domains->pluck('domain')->toArray();
-
-        $backlinkCounts = \App\Models\Backlink::selectRaw('LOWER(REPLACE(REPLACE(REPLACE(source_url, "https://www.", ""), "http://www.", ""), "https://", "")) as clean_domain, COUNT(*) as cnt')
-            ->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(REPLACE(REPLACE(REPLACE(source_url, "https://www.", ""), "http://www.", ""), "https://", ""))'), array_map(fn($d) => $d . '/', $domainNames))
-            ->groupBy('clean_domain')
-            ->pluck('cnt', 'clean_domain');
-
-        // Calcul simplifié : requête par domaine
-        $backlinkCountsMap = [];
-        $projectCountsMap  = [];
-
-        foreach ($domainNames as $domain) {
-            $bl = \App\Models\Backlink::where('source_url', 'like', '%' . $domain . '%')->get();
-            $backlinkCountsMap[$domain] = $bl->count();
-            $projectCountsMap[$domain]  = $bl->pluck('project_id')->unique()->count();
-        }
+        // Les counts sont maintenant des colonnes SQL : on construit les maps depuis les résultats
+        $backlinkCountsMap = $domains->pluck('backlinks_count', 'domain')->toArray();
+        $projectCountsMap  = $domains->pluck('projects_count', 'domain')->toArray();
 
         return view('pages.domains.index', compact(
             'domains',
@@ -106,41 +90,52 @@ class SourceDomainController extends Controller
             ->with('domainMetric')
             ->firstOrFail();
 
-        // Backlinks achetés sur ce domaine
-        $backlinks = \App\Models\Backlink::with(['project', 'platform'])
+        // Tous les backlinks du domaine, groupés par projet
+        $allBacklinks = \App\Models\Backlink::with(['project', 'platform'])
             ->where('source_url', 'like', '%' . $domain . '%')
             ->orderByDesc('published_at')
-            ->paginate(20);
+            ->get();
 
-        // Matrice couverture projets
         $allProjects = \App\Models\Project::orderBy('name')->get();
-        $linkedProjectIds = \App\Models\Backlink::where('source_url', 'like', '%' . $domain . '%')
-            ->pluck('project_id')
-            ->unique();
+        $linkedProjectIds = $allBacklinks->pluck('project_id')->unique();
 
-        $projectCoverage = $allProjects->map(function ($project) use ($domain, $linkedProjectIds) {
-            $bl = \App\Models\Backlink::where('project_id', $project->id)
-                ->where('source_url', 'like', '%' . $domain . '%')
-                ->orderByDesc('published_at')
-                ->get();
+        // Projets liés : avec leurs backlinks groupés
+        $linkedProjects = $allProjects
+            ->filter(fn($p) => $linkedProjectIds->contains($p->id))
+            ->map(function ($project) use ($allBacklinks) {
+                $bl = $allBacklinks->where('project_id', $project->id)->values();
+                return [
+                    'project'     => $project,
+                    'backlinks'   => $bl,
+                    'count'       => $bl->count(),
+                    'active'      => $bl->where('status', 'active')->count(),
+                    'lost'        => $bl->where('status', 'lost')->count(),
+                    'price_total' => $bl->sum('price'),
+                    'price_trend' => $this->computePriceTrend($bl),
+                    'last_date'   => $bl->max('published_at'),
+                ];
+            })->values();
 
-            return [
-                'project'       => $project,
-                'linked'        => $linkedProjectIds->contains($project->id),
-                'count'         => $bl->count(),
-                'last_backlink' => $bl->first(),
-                'price_trend'   => $this->computePriceTrend($bl),
-            ];
-        });
+        // Projets non liés = opportunités
+        $unlinkedProjects = $allProjects
+            ->filter(fn($p) => !$linkedProjectIds->contains($p->id))
+            ->values();
 
         // Indicateur prix global du domaine
         $priceTrend = $this->computePriceTrendFromDomain($domain);
 
+        // "Mon site" = ce domaine correspond à l'URL d'un de mes projets (c'est MON site)
+        // Différent de "j'y ai acheté des liens" (= domaine source externe)
+        $isInPortfolio = $allProjects->contains(
+            fn($p) => $p->url && str_contains(rtrim($p->url, '/'), $domain)
+        );
+
         return view('pages.domains.show', compact(
             'sourceDomain',
-            'backlinks',
-            'projectCoverage',
-            'priceTrend'
+            'linkedProjects',
+            'unlinkedProjects',
+            'priceTrend',
+            'isInPortfolio'
         ));
     }
 

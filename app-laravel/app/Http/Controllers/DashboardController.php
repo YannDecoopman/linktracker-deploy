@@ -117,57 +117,76 @@ class DashboardController extends Controller
                 ->first();
 
             // Construire les séries en propageant la dernière valeur connue sur les jours sans snapshot
-            $active     = [];
-            $lost       = [];
-            $changed    = [];
-            $total      = [];
-            $gained     = [];
-            $lostDelta  = [];
-            $delta      = [];
+            $active      = [];
+            $lost        = [];
+            $changed     = [];
+            $total       = [];
+            $perfect     = [];
+            $notIndexed  = [];
+            $nofollow    = [];
+            $gained      = [];
+            $lostDelta   = [];
+            $delta       = [];
 
-            $prevTotal  = $lastKnown?->count_total  ?? 0;
-            $prevActive = $lastKnown?->count_active ?? 0;
+            $prevTotal      = $lastKnown?->count_total       ?? 0;
+            $prevActive     = $lastKnown?->count_active      ?? 0;
+            $prevLost       = $lastKnown?->count_lost        ?? 0;
+            $prevChanged    = $lastKnown?->count_changed     ?? 0;
+            $prevPerfect    = $lastKnown?->count_perfect     ?? 0;
+            $prevNotIndexed = $lastKnown?->count_not_indexed ?? 0;
+            $prevNofollow   = $lastKnown?->count_nofollow    ?? 0;
 
             foreach ($dates as $date) {
                 $snap = $snapshots[$date] ?? null;
 
-                $activeVal  = $snap ? $snap->count_active  : $prevActive;
-                $lostVal    = $snap ? $snap->count_lost    : 0;
-                $changedVal = $snap ? $snap->count_changed : 0;
-                $totalVal   = $snap ? $snap->count_total   : $prevTotal;
+                $activeVal      = $snap ? $snap->count_active      : $prevActive;
+                $lostVal        = $snap ? $snap->count_lost        : $prevLost;
+                $changedVal     = $snap ? $snap->count_changed     : $prevChanged;
+                $totalVal       = $snap ? $snap->count_total       : $prevTotal;
+                $perfectVal     = $snap ? $snap->count_perfect     : $prevPerfect;
+                $notIndexedVal  = $snap ? $snap->count_not_indexed : $prevNotIndexed;
+                $nofollowVal    = $snap ? $snap->count_nofollow    : $prevNofollow;
 
-                $gainedVal   = max(0, $totalVal - $prevTotal);
-                $lostDeltaV  = max(0, $prevTotal - $totalVal + $gainedVal);
+                // Gains/pertes journaliers = delta par rapport au jour précédent
+                $gainedVal  = max(0, $totalVal - $prevTotal);
+                $lostDayVal = max(0, $lostVal  - $prevLost);
 
-                $active[]    = $activeVal;
-                $lost[]      = $lostVal;
-                $changed[]   = $changedVal;
-                $total[]     = $totalVal;
-                $gained[]    = $gainedVal;
-                $lostDelta[] = $lostDeltaV;
-                $delta[]     = $totalVal - $prevTotal;
+                $active[]     = $activeVal;
+                $lost[]       = $lostVal;
+                $changed[]    = $changedVal;
+                $total[]      = $totalVal;
+                $perfect[]    = $perfectVal;
+                $notIndexed[] = $notIndexedVal;
+                $nofollow[]   = $nofollowVal;
+                $gained[]     = $gainedVal;
+                $lostDelta[]  = $lostDayVal;
+                $delta[]      = $totalVal - $prevTotal;
 
                 if ($snap) {
-                    $prevTotal  = $totalVal;
-                    $prevActive = $activeVal;
+                    $prevTotal      = $totalVal;
+                    $prevActive     = $activeVal;
+                    $prevLost       = $lostVal;
+                    $prevChanged    = $changedVal;
+                    $prevPerfect    = $perfectVal;
+                    $prevNotIndexed = $notIndexedVal;
+                    $prevNofollow   = $nofollowVal;
                 }
             }
 
             $labelFormat = $days <= 90 ? 'd/m' : 'd/m/y';
 
             return [
-                'labels'  => array_map(fn($d) => \Carbon\Carbon::parse($d)->format($labelFormat), $dates),
-                'active'  => $active,
-                'lost'    => $lost,
-                'changed' => $changed,
-                'total'   => $total,
-                'gained'  => $gained,
-                'lostDelta' => $lostDelta,
-                'delta'   => $delta,
-                // Compatibilité avec l'ancien format
-                'perfect'     => $active,
-                'not_indexed' => array_fill(0, count($dates), 0),
-                'nofollow'    => array_fill(0, count($dates), 0),
+                'labels'      => array_map(fn($d) => \Carbon\Carbon::parse($d)->format($labelFormat), $dates),
+                'active'      => $active,
+                'lost'        => $lost,
+                'changed'     => $changed,
+                'total'       => $total,
+                'perfect'     => $perfect,
+                'not_indexed' => $notIndexed,
+                'nofollow'    => $nofollow,
+                'gained'      => $gained,
+                'lostDelta'   => $lostDelta,
+                'delta'       => $delta,
             ];
         });
 
