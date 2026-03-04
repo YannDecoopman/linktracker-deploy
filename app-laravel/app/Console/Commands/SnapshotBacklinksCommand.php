@@ -48,7 +48,10 @@ class SnapshotBacklinksCommand extends Command
 
     private function upsertSnapshot(string $date, ?int $projectId): void
     {
-        $query = Backlink::query()->when($projectId, fn($q) => $q->where('project_id', $projectId));
+        // Ne compter que les backlinks publiés à cette date (published_at ou created_at comme proxy)
+        $query = Backlink::query()
+            ->when($projectId, fn($q) => $q->where('project_id', $projectId))
+            ->where(DB::raw("DATE(COALESCE(published_at, DATE(created_at)))"), '<=', $date);
 
         BacklinkSnapshot::whereRaw("DATE(snapshot_date) = ?", [$date])
             ->where('project_id', $projectId)
@@ -65,16 +68,14 @@ class SnapshotBacklinksCommand extends Command
     }
 
     /**
-     * Rétro-remplissage : reconstitue les snapshots passés à partir des données
-     * actuelles + historique des alertes (approximation).
-     * Utile au premier lancement pour avoir un historique immédiat.
+     * Rétro-remplissage : reconstitue les snapshots passés en se basant sur published_at.
+     * Chaque jour, on compte les backlinks dont la date de publication est <= ce jour,
+     * avec leurs statuts actuels (meilleure approximation disponible sans historique de statuts).
      */
     private function runBackfill(int $days): int
     {
         $this->info("🔄 Rétro-remplissage sur {$days} jours...");
 
-        // Pour le backfill, on utilise published_at comme proxy de la date de création.
-        // On reconstitue jour par jour le nombre de backlinks qui existaient à cette date.
         $projectIds = array_merge([null], Project::pluck('id')->toArray());
 
         $bar = $this->output->createProgressBar($days);
@@ -84,26 +85,7 @@ class SnapshotBacklinksCommand extends Command
             $date = today()->subDays($i)->toDateString();
 
             foreach ($projectIds as $projectId) {
-                $base = Backlink::query()
-                    ->when($projectId, fn($q) => $q->where('project_id', $projectId))
-                    ->where(DB::raw("DATE(COALESCE(published_at, DATE(created_at)))"), '<=', $date);
-
-                $isToday = $date === today()->toDateString();
-
-                BacklinkSnapshot::whereRaw("DATE(snapshot_date) = ?", [$date])
-                    ->where('project_id', $projectId)
-                    ->delete();
-
-                BacklinkSnapshot::create([
-                    'snapshot_date' => $date,
-                    'project_id'    => $projectId,
-                    // Pour les jours passés : on ne connaît pas le statut d'alors,
-                    // on met tout en count_total (approximation). Aujourd'hui = vrais statuts.
-                    'count_active'  => $isToday ? (clone $base)->where('status', 'active')->count() : (clone $base)->count(),
-                    'count_lost'    => $isToday ? (clone $base)->where('status', 'lost')->count()   : 0,
-                    'count_changed' => $isToday ? (clone $base)->where('status', 'changed')->count() : 0,
-                    'count_total'   => (clone $base)->count(),
-                ]);
+                $this->upsertSnapshot($date, $projectId);
             }
 
             $bar->advance();

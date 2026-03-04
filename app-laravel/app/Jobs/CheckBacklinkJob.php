@@ -85,7 +85,7 @@ class CheckBacklinkJob implements ShouldQueue
                 $updateData['is_dofollow'] = $result['is_dofollow'];
                 $updateData['http_status'] = $result['http_status'];
 
-                // Si le backlink était perdu, le remettre en actif et créer une alerte de récupération
+                // Si le backlink était perdu ou en attente (jamais vérifié), le remettre en actif
                 if ($this->backlink->status === 'lost') {
                     $updateData['status'] = 'active';
                     Log::info('Backlink retrouvé - changement de statut lost → active', [
@@ -94,6 +94,12 @@ class CheckBacklinkJob implements ShouldQueue
 
                     // Créer une alerte de récupération
                     $alertService->createBacklinkRecoveredAlert($this->backlink);
+
+                } elseif ($this->backlink->status === 'pending') {
+                    $updateData['status'] = 'active';
+                    Log::info('Backlink vérifié pour la première fois - pending → active', [
+                        'backlink_id' => $this->backlink->id,
+                    ]);
 
                 } elseif ($this->backlink->status === 'active') {
                     // Vérifier si les attributs ont changé
@@ -117,8 +123,10 @@ class CheckBacklinkJob implements ShouldQueue
                         'error_message' => $result['error_message'],
                     ]);
 
-                    // Créer une alerte de perte
-                    $alertService->createBacklinkLostAlert($this->backlink, $result['error_message']);
+                    // Pas d'alerte si c'était un backlink importé jamais vérifié
+                    if ($this->backlink->status !== 'pending') {
+                        $alertService->createBacklinkLostAlert($this->backlink, $result['error_message']);
+                    }
                 }
             }
 

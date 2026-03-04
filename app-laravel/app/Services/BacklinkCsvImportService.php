@@ -15,7 +15,7 @@ class BacklinkCsvImportService
     /** Colonnes optionnelles du format natif avec leur valeur par défaut */
     public const OPTIONAL_COLUMNS = [
         'anchor_text'  => null,
-        'status'       => 'active',
+        'status'       => 'pending',
         'tier_level'   => 'tier1',
         'spot_type'    => 'external',
         'price'        => null,
@@ -163,7 +163,7 @@ class BacklinkCsvImportService
                 'source_url'  => ['required', 'url', 'max:2048'],
                 'target_url'  => ['required', 'url', 'max:2048'],
                 'anchor_text' => ['nullable', 'string', 'max:500'],
-                'status'      => ['nullable', 'in:active,lost,changed'],
+                'status'      => ['nullable', 'in:active,lost,changed,pending'],
                 'tier_level'  => ['nullable', 'in:tier1,tier2'],
                 'spot_type'   => ['nullable', 'in:external,internal'],
                 'price'       => ['nullable', 'numeric', 'min:0'],
@@ -195,7 +195,7 @@ class BacklinkCsvImportService
                 'source_url'    => $data['source_url'],
                 'target_url'    => $data['target_url'],
                 'anchor_text'   => $data['anchor_text'] ?: null,
-                'status'        => $data['status'] ?? 'active',
+                'status'        => $data['status'] ?? 'pending',
                 'tier_level'    => $data['tier_level'] ?? 'tier1',
                 'spot_type'     => $data['spot_type'] ?? 'external',
                 'price'         => isset($data['price']) && $data['price'] !== '' ? (float) $data['price'] : null,
@@ -257,10 +257,10 @@ class BacklinkCsvImportService
             $relRaw     = strtoupper($raw['rel'] ?? 'DF');
             $isDofollow = ($relRaw === 'DF');
 
-            $statusRaw = strtolower($raw['status'] ?? 'checked');
+            $statusRaw = strtolower($raw['status'] ?? '');
             $status    = match ($statusRaw) {
                 'dead link' => 'lost',
-                default     => 'active',
+                default     => 'pending',
             };
 
             // Indexed : "Yes" → true, "No" → false, vide → null
