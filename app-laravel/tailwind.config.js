@@ -51,4 +51,19 @@ export default {
     },
   },
   plugins: [],
+  safelist: [
+    // Classes utilisées dynamiquement dans Alpine.js (:class) non détectables par le scanner JIT
+    'rotate-90',
+    'rotate-180',
+    // Classes générées dynamiquement en PHP (ex: $daColor, $spamColor, $tc variables)
+    'text-emerald-600', 'text-emerald-700',
+    'text-amber-500', 'text-amber-600',
+    'text-red-500', 'text-red-600',
+    'text-blue-600',
+    'text-neutral-400', 'text-neutral-800',
+    'bg-red-50', 'bg-emerald-50', 'bg-amber-50', 'bg-blue-50', 'bg-neutral-50', 'bg-purple-50',
+    'border-red-200', 'border-emerald-200', 'border-amber-200', 'border-blue-200', 'border-neutral-200', 'border-purple-200',
+    'bg-purple-50', 'text-purple-700', 'border-purple-200',
+    'text-amber-500',
+  ],
 }

@@ -69,28 +69,33 @@
                     <tr class="bg-neutral-50 border-b border-neutral-200">
                         @php
                             $sortLink = fn($col) => route('domains.index', array_merge(request()->query(), [
-                                'sort' => $col,
+                                'sort'      => $col,
                                 'direction' => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc',
                             ]));
-                            $sortIcon = fn($col) => $sort === $col ? ($dir === 'asc' ? '↑' : '↓') : '';
+                            $sortIcon = function($col) use ($sort, $dir) {
+                                if ($sort !== $col) {
+                                    return '<svg class="inline w-3 h-3 ml-0.5 text-neutral-300" viewBox="0 0 10 14" fill="currentColor"><path d="M5 0l3 4H2L5 0zm0 14l-3-4h6l-3 4z"/></svg>';
+                                }
+                                return $dir === 'asc'
+                                    ? '<svg class="inline w-3 h-3 ml-0.5" viewBox="0 0 10 14" fill="currentColor"><path d="M5 0l3 4H2L5 0z"/></svg>'
+                                    : '<svg class="inline w-3 h-3 ml-0.5" viewBox="0 0 10 14" fill="currentColor"><path d="M5 14l-3-4h6l-3 4z"/></svg>';
+                            };
+                            $thClass     = 'px-4 py-2.5 font-medium text-neutral-500 uppercase text-xs';
+                            $sortable    = fn($col, $label, $align = 'left') =>
+                                '<th class="' . $thClass . ' text-' . $align . '">'
+                                . '<a href="' . $sortLink($col) . '" class="inline-flex items-center gap-0.5 hover:text-neutral-900 ' . ($sort === $col ? 'text-neutral-900' : '') . '">'
+                                . $label . $sortIcon($col)
+                                . '</a></th>';
                         @endphp
-                        <th class="px-4 py-2.5 text-left font-medium text-neutral-500 uppercase text-xs">
-                            <a href="{{ $sortLink('domain') }}" class="hover:text-neutral-900">Domaine {{ $sortIcon('domain') }}</a>
-                        </th>
-                        <th class="px-4 py-2.5 text-center font-medium text-neutral-500 uppercase text-xs">
-                            <a href="{{ $sortLink('da') }}" class="hover:text-neutral-900">DA {{ $sortIcon('da') }}</a>
-                        </th>
-                        <th class="px-4 py-2.5 text-center font-medium text-neutral-500 uppercase text-xs">
-                            <a href="{{ $sortLink('dr') }}" class="hover:text-neutral-900">DR {{ $sortIcon('dr') }}</a>
-                        </th>
-                        <th class="px-4 py-2.5 text-center font-medium text-neutral-500 uppercase text-xs">
-                            <a href="{{ $sortLink('spam_score') }}" class="hover:text-neutral-900">Spam {{ $sortIcon('spam_score') }}</a>
-                        </th>
-                        <th class="px-4 py-2.5 text-center font-medium text-neutral-500 uppercase text-xs">Ref. Domains</th>
-                        <th class="px-4 py-2.5 text-center font-medium text-neutral-500 uppercase text-xs">Backlinks</th>
-                        <th class="px-4 py-2.5 text-center font-medium text-neutral-500 uppercase text-xs">Projets</th>
-                        <th class="px-4 py-2.5 text-center font-medium text-neutral-500 uppercase text-xs">1er vu</th>
-                        <th class="px-4 py-2.5 text-right font-medium text-neutral-500 uppercase text-xs">Actions</th>
+                        {!! $sortable('domain', 'Domaine') !!}
+                        {!! $sortable('da', 'DA', 'center') !!}
+                        {!! $sortable('dr', 'DR', 'center') !!}
+                        {!! $sortable('spam_score', 'Spam', 'center') !!}
+                        {!! $sortable('referring_domains_count', 'Ref. Domains', 'center') !!}
+                        {!! $sortable('backlinks_count', 'Backlinks', 'center') !!}
+                        {!! $sortable('projects_count', 'Projets', 'center') !!}
+                        {!! $sortable('first_seen_at', '1er vu', 'center') !!}
+                        <th class="{{ $thClass }} text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-neutral-100">
