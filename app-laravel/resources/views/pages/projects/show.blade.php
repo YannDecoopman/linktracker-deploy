@@ -24,188 +24,25 @@
         </x-slot:actions>
     </x-page-header>
 
-    {{-- ═══════════════════════════════════════════════════════════
-         SCORE DE SANTÉ + KPI CARDS
-         ═══════════════════════════════════════════════════════════ --}}
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+    <x-kpi-strip
+        :total="$stats['total']"
+        :perfect="$stats['quality']"
+        :noindex="$stats['not_indexed']"
+        :nofollow="$stats['not_dofollow']"
+        :pending="$stats['pending_indexation']"
+        :lost="$stats['lost']"
+        :changed="$stats['changed']"
+        :pending-status="$stats['pending']"
+        :budget-total="$stats['budget_total']"
+        :budget-active="$stats['budget_active']"
+    />
 
-        {{-- Score de santé (grande card) --}}
-        <div class="bg-white rounded-xl border border-neutral-200 p-5 flex flex-col items-center justify-center">
-            @php
-                $score = $stats['health_score'];
-                $scoreColor = $score >= 75 ? 'text-emerald-600' : ($score >= 50 ? 'text-amber-500' : 'text-red-500');
-                $scoreBg    = $score >= 75 ? 'bg-emerald-50' : ($score >= 50 ? 'bg-amber-50' : 'bg-red-50');
-                $scoreBorder = $score >= 75 ? 'border-emerald-200' : ($score >= 50 ? 'border-amber-200' : 'border-red-200');
-                $scoreLabel = $score >= 75 ? 'Bonne santé' : ($score >= 50 ? 'Attention' : 'Critique');
-            @endphp
-            <p class="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Score de santé</p>
-            <div class="relative w-24 h-24 mb-2">
-                <svg class="w-24 h-24 -rotate-90" viewBox="0 0 36 36">
-                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f3f4f6" stroke-width="3"/>
-                    <circle cx="18" cy="18" r="15.9" fill="none"
-                        stroke="{{ $score >= 75 ? '#10b981' : ($score >= 50 ? '#f59e0b' : '#ef4444') }}"
-                        stroke-width="3"
-                        stroke-dasharray="{{ $score }}, 100"
-                        stroke-linecap="round"/>
-                </svg>
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <span class="text-xl font-black {{ $scoreColor }}">{{ $score }}</span>
-                </div>
-            </div>
-            <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold border rounded-full {{ $scoreBg }} {{ $scoreColor }} {{ $scoreBorder }}">
-                {{ $scoreLabel }}
-            </span>
-        </div>
-
-        {{-- KPI cards 3 colonnes --}}
-        <div class="lg:col-span-3 grid grid-cols-2 md:grid-cols-3 gap-4">
-
-            {{-- Total backlinks --}}
-            <div class="bg-white rounded-xl border border-neutral-200 p-4">
-                <p class="text-xs text-neutral-400 mb-1">Total backlinks</p>
-                <p class="text-2xl font-black text-neutral-900 tabular-nums">{{ $stats['total'] }}</p>
-                <div class="flex gap-2 mt-2 text-xs">
-                    <span class="text-emerald-600 font-semibold">{{ $stats['active'] }} actifs</span>
-                    @if($stats['lost'] > 0)
-                        <span class="text-red-500">· {{ $stats['lost'] }} perdus</span>
-                    @endif
-                </div>
-            </div>
-
-            {{-- Qualité (actif + indexé + dofollow) --}}
-            <div class="bg-white rounded-xl border border-neutral-200 p-4">
-                <p class="text-xs text-neutral-400 mb-1">Liens de qualité</p>
-                <p class="text-2xl font-black text-emerald-600 tabular-nums">{{ $stats['quality'] }}</p>
-                <p class="text-xs text-neutral-400 mt-1">Actif + indexé + dofollow</p>
-            </div>
-
-            {{-- Non indexés --}}
-            <div class="bg-white rounded-xl border border-neutral-200 p-4">
-                <p class="text-xs text-neutral-400 mb-1">Non indexés</p>
-                <p class="text-2xl font-black {{ $stats['unknown_indexed'] > 0 ? 'text-amber-500' : 'text-neutral-900' }} tabular-nums">
-                    {{ $stats['unknown_indexed'] }}
-                </p>
-                <div class="flex flex-col gap-0.5 mt-1">
-                    <p class="text-xs text-neutral-400">à vérifier</p>
-                    @if($stats['not_indexed'] > 0)
-                        <p class="text-xs text-red-500 font-semibold">{{ $stats['not_indexed'] }} noindex confirmés</p>
-                    @endif
-                </div>
-            </div>
-
-            {{-- Nofollow --}}
-            <div class="bg-white rounded-xl border border-neutral-200 p-4">
-                <p class="text-xs text-neutral-400 mb-1">Nofollow</p>
-                <p class="text-2xl font-black {{ $stats['not_dofollow'] > 0 ? 'text-amber-500' : 'text-neutral-900' }} tabular-nums">
-                    {{ $stats['not_dofollow'] }}
-                </p>
-                <p class="text-xs text-neutral-400 mt-1">liens sans jus SEO</p>
-            </div>
-
-            {{-- Budget total --}}
-            <div class="bg-white rounded-xl border border-neutral-200 p-4">
-                <p class="text-xs text-neutral-400 mb-1">Budget total</p>
-                <p class="text-2xl font-black text-neutral-900 tabular-nums">
-                    @if($stats['budget_total'] > 0)
-                        {{ number_format($stats['budget_total'], 0, ',', ' ') }} €
-                    @else
-                        <span class="text-neutral-300">—</span>
-                    @endif
-                </p>
-                @if($stats['budget_active'] > 0 && $stats['budget_active'] != $stats['budget_total'])
-                    <p class="text-xs text-neutral-400 mt-1">{{ number_format($stats['budget_active'], 0, ',', ' ') }} € actifs</p>
-                @endif
-            </div>
-
-            {{-- Perdus --}}
-            <div class="bg-white rounded-xl border border-{{ $stats['lost'] > 0 ? 'red-200' : 'neutral-200' }} p-4 {{ $stats['lost'] > 0 ? 'bg-red-50' : 'bg-white' }}">
-                <p class="text-xs {{ $stats['lost'] > 0 ? 'text-red-400' : 'text-neutral-400' }} mb-1">Backlinks perdus</p>
-                <p class="text-2xl font-black {{ $stats['lost'] > 0 ? 'text-red-600' : 'text-neutral-900' }} tabular-nums">
-                    {{ $stats['lost'] }}
-                </p>
-                @if($stats['changed'] > 0)
-                    <p class="text-xs text-amber-500 mt-1">+ {{ $stats['changed'] }} modifiés</p>
-                @endif
-            </div>
-
-        </div>
-    </div>
-
-    {{-- ═══════════════════════════════════════════════════════════
-         GRAPHIQUES D'ÉVOLUTION
-         ═══════════════════════════════════════════════════════════ --}}
-    <div class="bg-white rounded-xl border border-neutral-200 mb-6 overflow-hidden"
-         x-data="backlinkChart({{ $project->id }})">
-
-        {{-- Header : titre + sélecteur période --}}
-        <div class="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
-            <h2 class="text-sm font-bold text-neutral-900 uppercase tracking-wide">Évolution des backlinks</h2>
-            <div class="flex gap-1 bg-neutral-100 p-1 rounded-lg">
-                @foreach([30 => '30j', 90 => '90j', 180 => '6m', 365 => '1an'] as $d => $label)
-                    <button @click="loadCharts({{ $d }})"
-                        :class="days === {{ $d }} ? 'bg-white text-neutral-900 shadow-sm font-semibold' : 'text-neutral-500 hover:text-neutral-700'"
-                        class="px-3 py-1 text-xs rounded-md transition-all duration-150">
-                        {{ $label }}
-                    </button>
-                @endforeach
-            </div>
-        </div>
-
-        {{-- Graphique 1 : courbes cumulatives --}}
-        <div class="px-6 pt-4 pb-2">
-            {{-- Boutons toggle --}}
-            <div class="flex flex-wrap gap-2 mb-3">
-                <button @click="toggleSeries(0)" :class="t0 ? 'opacity-100' : 'opacity-40'"
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-blue-200 bg-blue-50 text-blue-700 transition-opacity">
-                    <span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span>Total
-                </button>
-                <button @click="toggleSeries(1)" :class="t1 ? 'opacity-100' : 'opacity-40'"
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 transition-opacity">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>Parfaits
-                </button>
-                <button @click="toggleSeries(2)" :class="t2 ? 'opacity-100' : 'opacity-40'"
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-amber-200 bg-amber-50 text-amber-700 transition-opacity">
-                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>Non indexés
-                </button>
-                <button @click="toggleSeries(3)" :class="t3 ? 'opacity-100' : 'opacity-40'"
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border border-violet-200 bg-violet-50 text-violet-700 transition-opacity">
-                    <span class="w-2.5 h-2.5 rounded-full bg-violet-500 inline-block"></span>Nofollow
-                </button>
-            </div>
-            <div x-show="loading" class="flex items-center justify-center h-44">
-                <div class="flex gap-1.5">
-                    <span class="w-1.5 h-6 bg-neutral-200 rounded-full animate-pulse"></span>
-                    <span class="w-1.5 h-10 bg-neutral-300 rounded-full animate-pulse"></span>
-                    <span class="w-1.5 h-8 bg-neutral-200 rounded-full animate-pulse"></span>
-                    <span class="w-1.5 h-12 bg-neutral-300 rounded-full animate-pulse"></span>
-                    <span class="w-1.5 h-6 bg-neutral-200 rounded-full animate-pulse"></span>
-                </div>
-            </div>
-            <div x-show="!loading" x-cloak class="relative h-44">
-                <canvas id="projectChartQuality"></canvas>
-            </div>
-        </div>
-
-        {{-- Séparateur --}}
-        <div class="mx-6 border-t border-neutral-100 my-1"></div>
-
-        {{-- Graphique 2 : bougies gains / pertes --}}
-        <div class="px-6 pt-2 pb-4">
-            <div class="flex items-center gap-3 mb-2">
-                <span class="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Gains &amp; Pertes / jour</span>
-                <span class="flex items-center gap-1 text-xs text-neutral-400">
-                    <span class="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block"></span>Gains
-                </span>
-                <span class="flex items-center gap-1 text-xs text-neutral-400">
-                    <span class="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block"></span>Pertes
-                </span>
-            </div>
-            <div x-show="!loading" x-cloak class="relative h-28">
-                <canvas id="projectChartCandles"></canvas>
-            </div>
-            <div x-show="loading" class="h-28"></div>
-        </div>
-    </div>
+    <x-backlink-chart
+        :canvas-id="'project-' . $project->id"
+        :project-id="$project->id"
+        :total="$stats['total']"
+        :active="$stats['active']"
+    />
 
     {{-- ═══════════════════════════════════════════════════════════
          TABLEAU DES BACKLINKS
@@ -345,9 +182,9 @@
                             <x-sortable-header field="tier_level" label="Tier" class="px-3 py-2" :route="route('projects.show', $project)" />
                             <x-sortable-header field="spot_type" label="Réseau" class="px-3 py-2" :route="route('projects.show', $project)" />
                             <x-sortable-header field="status" label="Statut" class="px-3 py-2" :route="route('projects.show', $project)" />
-                            <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase whitespace-nowrap" title="Code HTTP retourné lors du dernier check">HTTP</th>
-                            <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase">DF</th>
-                            <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase">Idx</th>
+                            <x-sortable-header field="http_status" label="HTTP" class="px-3 py-2 text-center" :route="route('projects.show', $project)" />
+                            <x-sortable-header field="is_dofollow" label="DF" class="px-3 py-2 text-center" :route="route('projects.show', $project)" />
+                            <x-sortable-header field="is_indexed" label="Idx" class="px-3 py-2 text-center" :route="route('projects.show', $project)" />
                             <th class="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase whitespace-nowrap">Prix</th>
                             <x-sortable-header field="last_checked_at" label="Vérifié" class="px-3 py-2" :route="route('projects.show', $project)" />
                             <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase w-20">Actions</th>
@@ -380,7 +217,6 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 function bulkActions() {
     return {
@@ -455,108 +291,5 @@ function inlineCheck(url, token) {
     };
 }
 
-function backlinkChart(projectId) {
-    let chartQuality = null;
-    let chartCandles = null;
-    return {
-        days: 30,
-        loading: true,
-        t0: true, t1: true, t2: true, t3: true,
-
-        init() { this.loadCharts(30); },
-
-        async loadCharts(d) {
-            this.days = d;
-            this.loading = true;
-            try {
-                const res = await fetch(`/api/dashboard/chart?days=${d}&project_id=${projectId}`);
-                const data = await res.json();
-                this.loading = false;
-                await this.$nextTick();
-                this.renderQuality(data);
-                this.renderCandles(data);
-            } catch (e) {
-                console.error('Erreur chargement graphique:', e);
-                this.loading = false;
-            }
-        },
-
-        toggleSeries(index) {
-            const key = 't' + index;
-            this[key] = !this[key];
-            if (chartQuality) {
-                chartQuality.data.datasets[index].hidden = !this[key];
-                chartQuality.update();
-            }
-        },
-
-        renderQuality(data) {
-            const ctx = document.getElementById('projectChartQuality');
-            if (!ctx) return;
-            if (chartQuality) chartQuality.destroy();
-            const tooltipLabels = ['Total', 'Parfaits', 'Non indexés', 'Nofollow'];
-            chartQuality = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.labels,
-                    datasets: [
-                        { label: 'Total', data: data.total || [], borderColor: 'rgba(59,130,246,0.9)', backgroundColor: 'rgba(59,130,246,0.06)', borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 4, tension: 0.4, fill: true, hidden: !this.t0 },
-                        { label: 'Parfaits', data: data.perfect || [], borderColor: 'rgba(16,185,129,0.9)', backgroundColor: 'rgba(16,185,129,0.05)', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.4, fill: false, hidden: !this.t1 },
-                        { label: 'Non indexés', data: data.not_indexed || [], borderColor: 'rgba(245,158,11,0.9)', backgroundColor: 'transparent', borderWidth: 2, borderDash: [4, 3], pointRadius: 0, pointHoverRadius: 4, tension: 0.4, fill: false, hidden: !this.t2 },
-                        { label: 'Nofollow', data: data.nofollow || [], borderColor: 'rgba(139,92,246,0.9)', backgroundColor: 'transparent', borderWidth: 2, borderDash: [4, 3], pointRadius: 0, pointHoverRadius: 4, tension: 0.4, fill: false, hidden: !this.t3 },
-                    ],
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(15,23,42,0.92)', titleColor: 'rgba(148,163,184,1)', bodyColor: '#fff',
-                            borderColor: 'rgba(51,65,85,0.5)', borderWidth: 1, padding: 10,
-                            callbacks: { label: (item) => ` ${tooltipLabels[item.datasetIndex]} : ${item.parsed.y}` },
-                        },
-                    },
-                    scales: {
-                        x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 10 }, color: '#94a3b8', maxTicksLimit: 10 } },
-                        y: { position: 'left', beginAtZero: false, grid: { color: 'rgba(148,163,184,0.1)' }, border: { display: false }, ticks: { font: { size: 10 }, color: '#94a3b8', precision: 0, maxTicksLimit: 5 } },
-                    },
-                },
-            });
-        },
-
-        renderCandles(data) {
-            const ctx = document.getElementById('projectChartCandles');
-            if (!ctx) return;
-            if (chartCandles) chartCandles.destroy();
-            chartCandles = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: data.labels,
-                    datasets: [
-                        { label: 'Gains', data: data.gained || [], backgroundColor: 'rgba(52,211,153,0.8)', borderColor: 'rgba(16,185,129,1)', borderWidth: 1, borderRadius: 3, borderSkipped: false },
-                        { label: 'Pertes', data: (data.lostDelta || []).map(v => -v), backgroundColor: 'rgba(248,113,113,0.8)', borderColor: 'rgba(239,68,68,1)', borderWidth: 1, borderRadius: 3, borderSkipped: false },
-                    ],
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(15,23,42,0.92)', titleColor: 'rgba(148,163,184,1)', bodyColor: '#fff',
-                            borderColor: 'rgba(51,65,85,0.5)', borderWidth: 1, padding: 10,
-                            callbacks: { label: (item) => { const v = item.datasetIndex === 0 ? item.parsed.y : -item.parsed.y; return ` ${item.dataset.label} : ${item.datasetIndex === 0 ? '+' : '-'}${v}`; } },
-                        },
-                    },
-                    scales: {
-                        x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 10 }, color: '#94a3b8', maxTicksLimit: 10 } },
-                        y: { grid: { color: 'rgba(148,163,184,0.08)' }, border: { display: false }, ticks: { font: { size: 10 }, color: '#94a3b8', precision: 0, maxTicksLimit: 4, callback: (v) => v >= 0 ? `+${v}` : v } },
-                    },
-                },
-            });
-        },
-    };
-}
 </script>
 @endpush

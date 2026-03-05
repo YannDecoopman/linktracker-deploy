@@ -32,6 +32,11 @@ class User extends Authenticatable
         'seo_api_key_encrypted',
         'dataforseo_login_encrypted',
         'dataforseo_password_encrypted',
+        'indexation_provider',
+        'speedyindex_api_key_encrypted',
+        'omegaindexer_api_key_encrypted',
+        'rocketindexer_api_key_encrypted',
+        'ralfyindex_api_key_encrypted',
     ];
 
     /**

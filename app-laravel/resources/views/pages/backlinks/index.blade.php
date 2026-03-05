@@ -31,7 +31,7 @@
         </p>
         <div class="flex items-center gap-2">
             @if(request('sort'))
-                @php $sortLabels = ['created_at' => 'Date', 'source_url' => 'URL', 'status' => 'Statut', 'tier_level' => 'Tier', 'spot_type' => 'Réseau', 'last_checked_at' => 'Vérifié']; @endphp
+                @php $sortLabels = ['created_at' => 'Date', 'source_url' => 'URL', 'status' => 'Statut', 'tier_level' => 'Tier', 'spot_type' => 'Réseau', 'last_checked_at' => 'Vérifié', 'http_status' => 'HTTP', 'is_dofollow' => 'DF', 'is_indexed' => 'Idx']; @endphp
                 <span class="text-xs text-neutral-400">Tri : {{ $sortLabels[request('sort')] ?? '' }} ({{ request('direction') === 'asc' ? '↑' : '↓' }})</span>
             @endif
             <form method="GET" action="{{ route('backlinks.index') }}" class="flex items-center gap-1.5">
@@ -177,9 +177,9 @@
                             <x-sortable-header field="tier_level" label="Tier" class="px-3 py-2" />
                             <x-sortable-header field="spot_type" label="Réseau" class="px-3 py-2" />
                             <x-sortable-header field="status" label="Statut" class="px-3 py-2" />
-                            <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase whitespace-nowrap" title="Code HTTP retourné lors du dernier check">HTTP</th>
-                            <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase">DF</th>
-                            <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase">Idx</th>
+                            <x-sortable-header field="http_status" label="HTTP" class="px-3 py-2 text-center" />
+                            <x-sortable-header field="is_dofollow" label="DF" class="px-3 py-2 text-center" />
+                            <x-sortable-header field="is_indexed" label="Idx" class="px-3 py-2 text-center" />
                             <th class="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase whitespace-nowrap">Prix</th>
                             <x-sortable-header field="last_checked_at" label="Vérifié" class="px-3 py-2" />
                             <th class="px-3 py-2 text-center text-xs font-medium text-neutral-500 uppercase w-20">Actions</th>

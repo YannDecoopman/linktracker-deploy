@@ -8,6 +8,8 @@ use App\Services\Alert\AlertService;
 use App\Services\Backlink\BacklinkCheckerService;
 use App\Services\Security\UrlValidator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 
 class BacklinkController extends Controller
 {
@@ -18,14 +20,17 @@ class BacklinkController extends Controller
     {
         // Validation des paramètres de filtrage
         $validated = $request->validate([
-            'search' => 'nullable|string|max:255',
-            'status' => 'nullable|in:active,lost,changed',
-            'project_id' => 'nullable|integer|exists:projects,id',
-            'tier_level' => 'nullable|in:tier1,tier2',
-            'spot_type' => 'nullable|in:external,internal',
-            'sort' => 'nullable|in:created_at,source_url,status,tier_level,spot_type,last_checked_at',
-            'direction' => 'nullable|in:asc,desc',
-            'per_page' => 'nullable|integer|in:15,25,50,100',
+            'search'      => 'nullable|string|max:255',
+            'status'      => 'nullable|in:active,lost,changed,pending',
+            'project_id'  => 'nullable|integer|exists:projects,id',
+            'tier_level'  => 'nullable|in:tier1,tier2',
+            'spot_type'   => 'nullable|in:external,internal',
+            'http_status' => 'nullable|string|max:10',
+            'is_dofollow' => 'nullable|in:1,0',
+            'is_indexed'  => 'nullable|in:1,0,null',
+            'sort'        => 'nullable|in:created_at,source_url,status,tier_level,spot_type,last_checked_at,http_status,is_dofollow,is_indexed',
+            'direction'   => 'nullable|in:asc,desc',
+            'per_page'    => 'nullable|integer|in:15,25,50,100',
         ]);
 
         $query = Backlink::with('project');
@@ -60,6 +65,25 @@ class BacklinkController extends Controller
             $query->where('spot_type', $validated['spot_type']);
         }
 
+        // Filtrer par statut HTTP
+        if (isset($validated['http_status']) && $validated['http_status'] !== '') {
+            $query->where('http_status', (int) $validated['http_status']);
+        }
+
+        // Filtrer par dofollow
+        if (isset($validated['is_dofollow']) && $validated['is_dofollow'] !== '') {
+            $query->where('is_dofollow', (bool) $validated['is_dofollow']);
+        }
+
+        // Filtrer par indexation
+        if (isset($validated['is_indexed']) && $validated['is_indexed'] !== '') {
+            if ($validated['is_indexed'] === 'null') {
+                $query->whereNull('is_indexed');
+            } else {
+                $query->where('is_indexed', (bool) $validated['is_indexed']);
+            }
+        }
+
         // Tri (déjà validé par la validation)
         $sortField = $validated['sort'] ?? 'created_at';
         $sortDirection = $validated['direction'] ?? 'desc';
@@ -74,8 +98,8 @@ class BacklinkController extends Controller
         $projects = Project::orderBy('name')->get();
 
         // Compter les filtres actifs
-        $activeFiltersCount = collect(['search', 'status', 'project_id', 'tier_level', 'spot_type'])
-            ->filter(fn($filter) => !empty($validated[$filter]))
+        $activeFiltersCount = collect(['search', 'status', 'project_id', 'tier_level', 'spot_type', 'http_status', 'is_dofollow', 'is_indexed'])
+            ->filter(fn($filter) => isset($validated[$filter]) && $validated[$filter] !== '')
             ->count();
 
         return view('pages.backlinks.index', compact('backlinks', 'projects', 'activeFiltersCount'));
@@ -534,6 +558,16 @@ class BacklinkController extends Controller
         }
         if (!empty($result['errors'])) {
             $message .= ' Certaines lignes ont des erreurs : ' . implode('; ', array_slice($result['errors'], 0, 3));
+        }
+
+        // Mettre à jour les snapshots + vider le cache dashboard pour que les graphiques soient à jour
+        if ($result['imported'] > 0) {
+            Artisan::call('app:snapshot-backlinks');
+            Cache::forget('dashboard_stats');
+            // Vider les caches des graphiques
+            foreach ([7, 30, 90, 180, 365] as $d) {
+                Cache::forget("dashboard_chart_v2_all_{$d}");
+            }
         }
 
         return redirect()->route('backlinks.index')->with('success', $message);

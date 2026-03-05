@@ -66,7 +66,7 @@ class SnapshotBacklinksCommand extends Command
             'count_total'      => (clone $query)->count(),
             'count_perfect'    => (clone $query)->where('status', 'active')->where('is_indexed', true)->where('is_dofollow', true)->count(),
             'count_not_indexed'=> (clone $query)->where('is_indexed', false)->count(),
-            'count_nofollow'   => (clone $query)->where('is_dofollow', false)->count(),
+            'count_nofollow'   => (clone $query)->where('status', 'active')->where('http_status', 200)->where('is_dofollow', false)->count(),
         ]);
     }
 
