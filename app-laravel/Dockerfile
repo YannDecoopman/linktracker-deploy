@@ -11,7 +11,7 @@ RUN apk add --no-cache \
     nodejs \
     npm
 
-RUN docker-php-ext-install pdo pdo_pgsql pgsql xml
+RUN docker-php-ext-install pdo pdo_pgsql pgsql xml bcmath
 
 RUN apk add --no-cache pcre-dev $PHPIZE_DEPS \
     && pecl install redis \
@@ -23,6 +23,7 @@ WORKDIR /var/www/html
 
 COPY . .
 
+ENV COMPOSER_MEMORY_LIMIT=-1
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts \
     && composer dump-autoload --optimize
 
