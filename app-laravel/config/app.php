@@ -155,7 +155,7 @@ return [
     |
     */
 
-    'providers' => ServiceProvider::defaultProviders()->merge([
+    'providers' => ServiceProvider::defaultProviders()->merge(array_filter([
         /*
          * Package Service Providers...
          */
@@ -168,9 +168,9 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-        App\Providers\TelescopeServiceProvider::class,
+        class_exists(\Laravel\Telescope\TelescopeApplicationServiceProvider::class) ? App\Providers\TelescopeServiceProvider::class : null,
         App\Providers\ViewServiceProvider::class,
-    ])->toArray(),
+    ]))->toArray(),
 
     /*
     |--------------------------------------------------------------------------
