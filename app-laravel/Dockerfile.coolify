@@ -1,0 +1,42 @@
+FROM php:8.2-fpm-alpine
+
+RUN apk add --no-cache \
+    git curl libpng-dev libxml2-dev zip unzip postgresql-dev \
+    nodejs npm nginx supervisor
+
+RUN docker-php-ext-install pdo pdo_pgsql pgsql xml bcmath
+
+RUN apk add --no-cache pcre-dev $PHPIZE_DEPS \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del pcre-dev $PHPIZE_DEPS
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+COPY . .
+
+ENV COMPOSER_MEMORY_LIMIT=-1
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts 2>&1; \
+    RESULT=$?; \
+    if [ $RESULT -ne 0 ]; then \
+        echo "=== COMPOSER FAILED with exit code $RESULT ==="; \
+        composer diagnose 2>&1 || true; \
+        exit $RESULT; \
+    fi \
+    && composer dump-autoload --optimize
+
+RUN npm ci && npm run build && rm -rf node_modules
+
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
+
+RUN mkdir -p /var/log/supervisor
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+EXPOSE 80
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
