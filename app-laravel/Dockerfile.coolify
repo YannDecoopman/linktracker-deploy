@@ -4,7 +4,7 @@ RUN apk add --no-cache \
     git curl libpng-dev libxml2-dev zip unzip postgresql-dev \
     nodejs npm nginx supervisor
 
-RUN docker-php-ext-install pdo pdo_pgsql pgsql xml bcmath
+RUN docker-php-ext-install pdo pdo_pgsql pgsql xml bcmath pcntl
 
 RUN apk add --no-cache pcre-dev $PHPIZE_DEPS \
     && pecl install redis \
@@ -18,13 +18,7 @@ WORKDIR /var/www/html
 COPY . .
 
 ENV COMPOSER_MEMORY_LIMIT=-1
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts 2>&1; \
-    RESULT=$?; \
-    if [ $RESULT -ne 0 ]; then \
-        echo "=== COMPOSER FAILED with exit code $RESULT ==="; \
-        composer diagnose 2>&1 || true; \
-        exit $RESULT; \
-    fi \
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts \
     && composer dump-autoload --optimize
 
 RUN npm ci && npm run build && rm -rf node_modules
