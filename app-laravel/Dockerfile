@@ -24,7 +24,7 @@ WORKDIR /var/www/html
 COPY . .
 
 ENV COMPOSER_MEMORY_LIMIT=-1
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts \
+RUN php -m && composer install --optimize-autoloader --no-interaction --no-scripts \
     && composer dump-autoload --optimize
 
 RUN npm ci && npm run build
