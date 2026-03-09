@@ -21,16 +21,11 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
-
-COPY package.json package-lock.json ./
-RUN npm ci
-
 COPY . .
 
-RUN composer run-script post-autoload-dump 2>/dev/null || true
-RUN npm run build
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+RUN npm ci && npm run build
 
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
