@@ -184,7 +184,7 @@ class IndexationController extends Controller
             ->where('submission_status', 'not_indexed')
             ->select('source_url', DB::raw('COUNT(*) as attempt_count'))
             ->groupBy('source_url')
-            ->having('attempt_count', '>=', 2)
+            ->havingRaw('COUNT(*) >= 2')
             ->orderByDesc('attempt_count')
             ->limit(20)
             ->get();
