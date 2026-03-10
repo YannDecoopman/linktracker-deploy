@@ -12,14 +12,26 @@ class ProfileController extends Controller
 {
     public function show()
     {
-        return view('pages.profile.show', ['user' => auth()->user()]);
+        $user = auth()->user() ?? \App\Models\User::first();
+
+        if (! $user) {
+            return redirect('/dashboard')->with('error', 'Aucun utilisateur configuré.');
+        }
+
+        return view('pages.profile.show', ['user' => $user]);
     }
 
     public function updatePassword(Request $request)
     {
+        $user = auth()->user() ?? \App\Models\User::first();
+
+        if (! $user) {
+            return back()->with('error', 'Aucun utilisateur configuré.');
+        }
+
         $request->validate([
-            'current_password' => ['required', function ($attribute, $value, $fail) {
-                if (!Hash::check($value, auth()->user()->password)) {
+            'current_password' => ['required', function ($attribute, $value, $fail) use ($user) {
+                if (!Hash::check($value, $user->password)) {
                     $fail('Le mot de passe actuel est incorrect.');
                 }
             }],
@@ -29,7 +41,7 @@ class ProfileController extends Controller
             'password.confirmed' => 'La confirmation du mot de passe ne correspond pas.',
         ]);
 
-        auth()->user()->update([
+        $user->update([
             'password' => Hash::make($request->password),
         ]);
 

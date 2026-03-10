@@ -16,6 +16,10 @@ class SettingsController extends Controller
     {
         $user = auth()->user() ?? \App\Models\User::first();
 
+        if (! $user) {
+            return redirect('/dashboard')->with('error', 'Aucun utilisateur configuré.');
+        }
+
         $queueStats = [
             'pending'  => DB::table('jobs')->count(),
             'failed'   => DB::table('failed_jobs')->count(),
@@ -79,7 +83,8 @@ class SettingsController extends Controller
 
         $validated['email_alerts_enabled'] = $request->boolean('email_alerts_enabled');
 
-        auth()->user()->update($validated);
+        $user = auth()->user() ?? \App\Models\User::first();
+        $user->update($validated);
 
         return back()->with('success', 'Paramètres de monitoring sauvegardés.');
     }
@@ -97,7 +102,8 @@ class SettingsController extends Controller
             $updateData['seo_api_key_encrypted'] = Crypt::encryptString($validated['seo_api_key']);
         }
 
-        auth()->user()->update($updateData);
+        $user = auth()->user() ?? \App\Models\User::first();
+        $user->update($updateData);
 
         return back()->with('success', 'Configuration API SEO sauvegardée.');
     }
@@ -166,7 +172,8 @@ class SettingsController extends Controller
             $updateData['dataforseo_password_encrypted'] = Crypt::encryptString($validated['dataforseo_password']);
         }
 
-        auth()->user()->update($updateData);
+        $user = auth()->user() ?? \App\Models\User::first();
+        $user->update($updateData);
 
         return back()->with('success', 'Configuration DataforSEO sauvegardée.');
     }
@@ -193,7 +200,8 @@ class SettingsController extends Controller
             }
         }
 
-        auth()->user()->update($updateData);
+        $user = auth()->user() ?? \App\Models\User::first();
+        $user->update($updateData);
 
         return back()->with('success', 'Configuration Indexation sauvegardée.');
     }
