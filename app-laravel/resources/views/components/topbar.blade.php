@@ -160,31 +160,18 @@
 
                 {{-- Logout --}}
                 <div class="border-t border-neutral-200 py-1">
-                    @if(Route::has('logout'))
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button
-                                type="submit"
-                                class="flex items-center w-full px-4 py-2 text-sm text-danger-600 hover:bg-danger-50"
-                            >
-                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                </svg>
-                                Déconnexion
-                            </button>
-                        </form>
-                    @else
-                        <a
-                            href="#"
-                            class="flex items-center w-full px-4 py-2 text-sm text-neutral-500 cursor-not-allowed"
-                            title="L'authentification n'est pas encore configurée"
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button
+                            type="submit"
+                            class="flex items-center w-full px-4 py-2 text-sm text-danger-600 hover:bg-danger-50"
                         >
                             <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                             </svg>
-                            Déconnexion (bientôt disponible)
-                        </a>
-                    @endif
+                            Déconnexion
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>

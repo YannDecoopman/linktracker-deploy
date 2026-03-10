@@ -87,7 +87,7 @@ class SeoMetricService
         $login    = '';
         $password = '';
 
-        $user = auth()->user() ?? \App\Models\User::first();
+        $user = auth()->user();
         if ($user && ! empty($user->dataforseo_login_encrypted)) {
             try {
                 $login    = \Illuminate\Support\Facades\Crypt::decryptString($user->dataforseo_login_encrypted);

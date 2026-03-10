@@ -11,7 +11,7 @@ class WebhookSettingsController extends Controller
 {
     public function show()
     {
-        $user = auth()->user() ?? \App\Models\User::first();
+        $user = auth()->user();
 
         if (! $user) {
             return redirect('/dashboard')->with('error', 'Aucun utilisateur configuré.');
@@ -32,7 +32,7 @@ class WebhookSettingsController extends Controller
             'webhook_events.*' => 'string|in:backlink_lost,backlink_changed,backlink_recovered',
         ]);
 
-        $user = auth()->user() ?? \App\Models\User::first();
+        $user = auth()->user();
         $user->update([
             'webhook_url' => $validated['webhook_url'] ?? null,
             'webhook_secret' => $validated['webhook_secret'] ?? null,
@@ -52,7 +52,7 @@ class WebhookSettingsController extends Controller
 
     public function test(Request $request)
     {
-        $user = auth()->user() ?? \App\Models\User::first();
+        $user = auth()->user();
 
         if (!$user->webhook_url) {
             return back()->with('error', 'Aucune URL webhook configurée.');

@@ -55,7 +55,7 @@ class ReindexingService
 
     private function resolveProvider(): ReindexingProviderInterface
     {
-        $user         = auth()->user() ?? \App\Models\User::first();
+        $user         = auth()->user();
         $providerName = $user?->indexation_provider ?? 'speedyindex';
 
         return match ($providerName) {

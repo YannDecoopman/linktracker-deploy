@@ -17,7 +17,7 @@ class IndexationController extends Controller
      */
     public function index(Request $request)
     {
-        $user    = auth()->user() ?? \App\Models\User::first();
+        $user    = auth()->user();
 
         if (! $user) {
             return redirect('/dashboard')->with('error', 'Aucun utilisateur configuré.');
@@ -78,7 +78,7 @@ class IndexationController extends Controller
             'notes'            => 'nullable|string|max:1000',
         ]);
 
-        $user      = auth()->user() ?? \App\Models\User::first();
+        $user      = auth()->user();
 
         if (! $user) {
             return redirect('/dashboard')->with('error', 'Aucun utilisateur configuré.');

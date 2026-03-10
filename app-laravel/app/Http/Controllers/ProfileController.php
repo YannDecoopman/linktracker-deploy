@@ -12,7 +12,7 @@ class ProfileController extends Controller
 {
     public function show()
     {
-        $user = auth()->user() ?? \App\Models\User::first();
+        $user = auth()->user();
 
         if (! $user) {
             return redirect('/dashboard')->with('error', 'Aucun utilisateur configuré.');
@@ -23,7 +23,7 @@ class ProfileController extends Controller
 
     public function updatePassword(Request $request)
     {
-        $user = auth()->user() ?? \App\Models\User::first();
+        $user = auth()->user();
 
         if (! $user) {
             return back()->with('error', 'Aucun utilisateur configuré.');

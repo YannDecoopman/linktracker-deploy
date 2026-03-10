@@ -1,6 +1,8 @@
 <?php
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\MagicLinkController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\BacklinkController;
@@ -17,122 +19,107 @@ use App\Http\Controllers\SourceDomainController;
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
 */
 
-// NEW BLADE ROUTES - SaaS UI Redesign (EPIC-013)
-
-// Home page - Redirect to dashboard
-Route::get('/', function () {
-    return redirect('/dashboard');
+// Auth routes
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [MagicLinkController::class, 'showLogin'])->name('login');
+    Route::post('/login', [MagicLinkController::class, 'sendLink'])->name('magic-link.send')->middleware('throttle:5,1');
 });
 
-// Dashboard principale avec nouveau layout Blade
-Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-Route::get('/api/dashboard/chart', [DashboardController::class, 'chartData'])->name('dashboard.chart');
+Route::get('/magic-link/authenticate', [MagicLinkController::class, 'authenticate'])->middleware('signed')->name('magic-link.authenticate');
 
-// Projects - CRUD complet avec nouveau layout Blade
-Route::get('/projects/{project}/report', [ProjectController::class, 'report'])->name('projects.report');
-Route::resource('projects', ProjectController::class);
+Route::post('/logout', function () {
+    Auth::logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect()->route('login');
+})->name('logout');
 
-// Import CSV de backlinks (STORY-031) - AVANT la resource pour éviter le conflit avec {backlink}
-Route::get('/backlinks/import', [BacklinkController::class, 'importForm'])->name('backlinks.import');
-Route::post('/backlinks/import', [BacklinkController::class, 'importCsv'])
-    ->name('backlinks.import.process')
-    ->middleware(['throttle:backlink-import']);
+// All app routes behind auth
+Route::middleware('auth')->group(function () {
+    Route::get('/', function () {
+        return redirect('/dashboard');
+    });
 
-// Export CSV de backlinks (STORY-035)
-Route::get('/backlinks/export', [BacklinkController::class, 'exportCsv'])->name('backlinks.export');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/api/dashboard/chart', [DashboardController::class, 'chartData'])->name('dashboard.chart');
 
-// Backlinks - CRUD complet avec nouveau layout Blade
-// Rate limiting sur index pour éviter DoS via filtres/recherche
-Route::resource('backlinks', BacklinkController::class)
-    ->middleware(['throttle:60,1']);
+    Route::get('/projects/{project}/report', [ProjectController::class, 'report'])->name('projects.report');
+    Route::resource('projects', ProjectController::class);
 
-// Bulk actions (suppression/édition en masse)
-Route::post('/backlinks/bulk-delete', [BacklinkController::class, 'bulkDelete'])->name('backlinks.bulk-delete');
-Route::post('/backlinks/bulk-edit', [BacklinkController::class, 'bulkEdit'])->name('backlinks.bulk-edit');
-Route::post('/backlinks/bulk-check', [BacklinkController::class, 'bulkCheck'])
-    ->name('backlinks.bulk-check')
-    ->middleware(['throttle:backlink-check']);
+    Route::get('/backlinks/import', [BacklinkController::class, 'importForm'])->name('backlinks.import');
+    Route::post('/backlinks/import', [BacklinkController::class, 'importCsv'])
+        ->name('backlinks.import.process')
+        ->middleware(['throttle:backlink-import']);
 
-// Vérification manuelle d'un backlink (STORY-044: 10 req/min par utilisateur)
-Route::post('/backlinks/{backlink}/check', [BacklinkController::class, 'check'])
-    ->name('backlinks.check')
-    ->middleware(['throttle:backlink-check']);
+    Route::get('/backlinks/export', [BacklinkController::class, 'exportCsv'])->name('backlinks.export');
 
-// Refresh métriques SEO d'un backlink (STORY-025, STORY-044: 3 req/min par utilisateur)
-Route::post('/backlinks/{backlink}/seo-metrics', [BacklinkController::class, 'refreshSeoMetrics'])
-    ->name('backlinks.seo-metrics')
-    ->middleware(['throttle:seo-refresh']);
+    Route::resource('backlinks', BacklinkController::class)
+        ->middleware(['throttle:60,1']);
 
-// Platforms - Gestion des plateformes d'achat de liens
-Route::resource('platforms', PlatformController::class)->except(['show']);
+    Route::post('/backlinks/bulk-delete', [BacklinkController::class, 'bulkDelete'])->name('backlinks.bulk-delete');
+    Route::post('/backlinks/bulk-edit', [BacklinkController::class, 'bulkEdit'])->name('backlinks.bulk-edit');
+    Route::post('/backlinks/bulk-check', [BacklinkController::class, 'bulkCheck'])
+        ->name('backlinks.bulk-check')
+        ->middleware(['throttle:backlink-check']);
 
-// Alerts - Système d'alertes pour backlinks (EPIC-004)
-Route::get('/alerts', [AlertController::class, 'index'])->name('alerts.index');
-Route::patch('/alerts/{alert}/mark-read', [AlertController::class, 'markAsRead'])->name('alerts.mark-read');
-Route::patch('/alerts/mark-all-read', [AlertController::class, 'markAllAsRead'])->name('alerts.mark-all-read');
-Route::delete('/alerts/{alert}', [AlertController::class, 'destroy'])->name('alerts.destroy');
-Route::delete('/alerts/destroy-all-read', [AlertController::class, 'destroyAllRead'])->name('alerts.destroy-all-read');
+    Route::post('/backlinks/{backlink}/check', [BacklinkController::class, 'check'])
+        ->name('backlinks.check')
+        ->middleware(['throttle:backlink-check']);
 
-// Settings - Configuration globale (STORY-027, STORY-028)
-Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
-Route::patch('/settings/monitoring', [SettingsController::class, 'updateMonitoring'])->name('settings.monitoring');
-Route::post('/settings/monitoring/run-check', [SettingsController::class, 'runCheck'])->name('settings.monitoring.run-check');
-Route::patch('/settings/seo', [SettingsController::class, 'updateSeo'])->name('settings.seo');
-Route::post('/settings/seo/test', [SettingsController::class, 'testSeoConnection'])->name('settings.seo.test');
-Route::patch('/settings/dataforseo', [SettingsController::class, 'updateDataforSeo'])->name('settings.dataforseo');
-Route::post('/settings/dataforseo/test', [SettingsController::class, 'testDataforSeoConnection'])->name('settings.dataforseo.test');
+    Route::post('/backlinks/{backlink}/seo-metrics', [BacklinkController::class, 'refreshSeoMetrics'])
+        ->name('backlinks.seo-metrics')
+        ->middleware(['throttle:seo-refresh']);
 
-// Settings - Webhook configurable (STORY-019)
-Route::get('/settings/webhook', [WebhookSettingsController::class, 'show'])->name('settings.webhook');
-Route::put('/settings/webhook', [WebhookSettingsController::class, 'update'])->name('settings.webhook.update');
-Route::post('/settings/webhook/test', [WebhookSettingsController::class, 'test'])->name('settings.webhook.test');
-Route::get('/settings/webhook/generate-secret', [WebhookSettingsController::class, 'generateSecret'])->name('settings.webhook.generate-secret');
+    Route::resource('platforms', PlatformController::class)->except(['show']);
 
-// Profile utilisateur (STORY-046)
-Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
-Route::patch('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    Route::get('/alerts', [AlertController::class, 'index'])->name('alerts.index');
+    Route::patch('/alerts/{alert}/mark-read', [AlertController::class, 'markAsRead'])->name('alerts.mark-read');
+    Route::patch('/alerts/mark-all-read', [AlertController::class, 'markAllAsRead'])->name('alerts.mark-all-read');
+    Route::delete('/alerts/{alert}', [AlertController::class, 'destroy'])->name('alerts.destroy');
+    Route::delete('/alerts/destroy-all-read', [AlertController::class, 'destroyAllRead'])->name('alerts.destroy-all-read');
 
-// Domaines sources (EPIC-014) - AVANT catch-all
-Route::get('/domains', [SourceDomainController::class, 'index'])->name('domains.index');
-Route::post('/domains', [SourceDomainController::class, 'store'])->name('domains.store');
-Route::get('/domains/{domain}', [SourceDomainController::class, 'show'])->name('domains.show')->where('domain', '[a-z0-9\-\.]+');
-Route::post('/domains/{domain}/refresh-metrics', [SourceDomainController::class, 'refreshMetrics'])->name('domains.refresh-metrics')->middleware(['throttle:seo-refresh'])->where('domain', '[a-z0-9\-\.]+');
+    Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+    Route::patch('/settings/monitoring', [SettingsController::class, 'updateMonitoring'])->name('settings.monitoring');
+    Route::post('/settings/monitoring/run-check', [SettingsController::class, 'runCheck'])->name('settings.monitoring.run-check');
+    Route::patch('/settings/seo', [SettingsController::class, 'updateSeo'])->name('settings.seo');
+    Route::post('/settings/seo/test', [SettingsController::class, 'testSeoConnection'])->name('settings.seo.test');
+    Route::patch('/settings/dataforseo', [SettingsController::class, 'updateDataforSeo'])->name('settings.dataforseo');
+    Route::post('/settings/dataforseo/test', [SettingsController::class, 'testDataforSeoConnection'])->name('settings.dataforseo.test');
 
-// Indexation — Workflow de réindexation (EPIC-015)
-Route::get('/indexation', [IndexationController::class, 'index'])->name('indexation.index');
-Route::post('/indexation/campaigns', [IndexationController::class, 'store'])
-    ->name('indexation.campaigns.store')
-    ->middleware(['throttle:indexation-submit']);
-Route::get('/indexation/campaigns/{campaign}', [IndexationController::class, 'showCampaign'])
-    ->name('indexation.campaigns.show');
-Route::get('/indexation/campaigns/{campaign}/status', [IndexationController::class, 'campaignStatus'])
-    ->name('indexation.campaigns.status');
+    Route::get('/settings/webhook', [WebhookSettingsController::class, 'show'])->name('settings.webhook');
+    Route::put('/settings/webhook', [WebhookSettingsController::class, 'update'])->name('settings.webhook.update');
+    Route::post('/settings/webhook/test', [WebhookSettingsController::class, 'test'])->name('settings.webhook.test');
+    Route::get('/settings/webhook/generate-secret', [WebhookSettingsController::class, 'generateSecret'])->name('settings.webhook.generate-secret');
 
-// Settings Indexation (EPIC-015)
-Route::patch('/settings/indexation', [SettingsController::class, 'updateIndexation'])->name('settings.indexation');
-Route::post('/settings/indexation/test', [SettingsController::class, 'testIndexationConnection'])->name('settings.indexation.test');
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+    Route::patch('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
-// Marketplace - Commandes de liens (STORY-032/033)
-Route::resource('orders', OrderController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
-Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
+    Route::get('/domains', [SourceDomainController::class, 'index'])->name('domains.index');
+    Route::post('/domains', [SourceDomainController::class, 'store'])->name('domains.store');
+    Route::get('/domains/{domain}', [SourceDomainController::class, 'show'])->name('domains.show')->where('domain', '[a-z0-9\-\.]+');
+    Route::post('/domains/{domain}/refresh-metrics', [SourceDomainController::class, 'refreshMetrics'])->name('domains.refresh-metrics')->middleware(['throttle:seo-refresh'])->where('domain', '[a-z0-9\-\.]+');
 
-// Page "En construction" pour fonctionnalités futures
-Route::view('/under-construction', 'pages.under-construction')->name('pages.under-construction');
+    Route::get('/indexation', [IndexationController::class, 'index'])->name('indexation.index');
+    Route::post('/indexation/campaigns', [IndexationController::class, 'store'])
+        ->name('indexation.campaigns.store')
+        ->middleware(['throttle:indexation-submit']);
+    Route::get('/indexation/campaigns/{campaign}', [IndexationController::class, 'showCampaign'])
+        ->name('indexation.campaigns.show');
+    Route::get('/indexation/campaigns/{campaign}/status', [IndexationController::class, 'campaignStatus'])
+        ->name('indexation.campaigns.status');
 
-// TODO: Ajouter routes Blade pour :
-// - /alerts (EPIC-004)
-// - /orders (EPIC-006)
-// - /settings (EPIC-008)
+    Route::patch('/settings/indexation', [SettingsController::class, 'updateIndexation'])->name('settings.indexation');
+    Route::post('/settings/indexation/test', [SettingsController::class, 'testIndexationConnection'])->name('settings.indexation.test');
 
-// SPA entry point - all routes handled by Vue Router (ancien système)
-// IMPORTANT: Cette route catch-all doit rester en dernier
+    Route::resource('orders', OrderController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
+    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
+
+    Route::view('/under-construction', 'pages.under-construction')->name('pages.under-construction');
+});
+
+// SPA entry point - catch-all must stay last
 Route::get('/{any}', function () {
     return view('app');
 })->where('any', '.*');

@@ -14,7 +14,7 @@ class SettingsController extends Controller
 {
     public function index()
     {
-        $user = auth()->user() ?? \App\Models\User::first();
+        $user = auth()->user();
 
         if (! $user) {
             return redirect('/dashboard')->with('error', 'Aucun utilisateur configuré.');
@@ -83,7 +83,7 @@ class SettingsController extends Controller
 
         $validated['email_alerts_enabled'] = $request->boolean('email_alerts_enabled');
 
-        $user = auth()->user() ?? \App\Models\User::first();
+        $user = auth()->user();
         $user->update($validated);
 
         return back()->with('success', 'Paramètres de monitoring sauvegardés.');
@@ -102,7 +102,7 @@ class SettingsController extends Controller
             $updateData['seo_api_key_encrypted'] = Crypt::encryptString($validated['seo_api_key']);
         }
 
-        $user = auth()->user() ?? \App\Models\User::first();
+        $user = auth()->user();
         $user->update($updateData);
 
         return back()->with('success', 'Configuration API SEO sauvegardée.');
@@ -110,7 +110,7 @@ class SettingsController extends Controller
 
     public function testSeoConnection(Request $request)
     {
-        $user = auth()->user() ?? \App\Models\User::first();
+        $user = auth()->user();
 
         if ($user->seo_provider === 'custom' || empty($user->seo_api_key_encrypted)) {
             return response()->json([
@@ -172,7 +172,7 @@ class SettingsController extends Controller
             $updateData['dataforseo_password_encrypted'] = Crypt::encryptString($validated['dataforseo_password']);
         }
 
-        $user = auth()->user() ?? \App\Models\User::first();
+        $user = auth()->user();
         $user->update($updateData);
 
         return back()->with('success', 'Configuration DataforSEO sauvegardée.');
@@ -200,7 +200,7 @@ class SettingsController extends Controller
             }
         }
 
-        $user = auth()->user() ?? \App\Models\User::first();
+        $user = auth()->user();
         $user->update($updateData);
 
         return back()->with('success', 'Configuration Indexation sauvegardée.');
@@ -211,7 +211,7 @@ class SettingsController extends Controller
      */
     public function testIndexationConnection(Request $request)
     {
-        $user = auth()->user() ?? \App\Models\User::first();
+        $user = auth()->user();
 
         $providerName = $user->indexation_provider ?? 'speedyindex';
         $keyColumn    = "{$providerName}_api_key_encrypted";
@@ -263,7 +263,7 @@ class SettingsController extends Controller
      */
     public function testDataforSeoConnection(Request $request)
     {
-        $user = auth()->user() ?? \App\Models\User::first();
+        $user = auth()->user();
 
         if (empty($user->dataforseo_login_encrypted) || empty($user->dataforseo_password_encrypted)) {
             return response()->json([
