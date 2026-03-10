@@ -18,6 +18,11 @@ class IndexationController extends Controller
     public function index(Request $request)
     {
         $user    = auth()->user() ?? \App\Models\User::first();
+
+        if (! $user) {
+            return redirect('/dashboard')->with('error', 'Aucun utilisateur configuré.');
+        }
+
         $service = new ReindexingService();
 
         // KPIs globaux pour le rapport
@@ -74,6 +79,11 @@ class IndexationController extends Controller
         ]);
 
         $user      = auth()->user() ?? \App\Models\User::first();
+
+        if (! $user) {
+            return redirect('/dashboard')->with('error', 'Aucun utilisateur configuré.');
+        }
+
         $service   = new ReindexingService();
 
         if (! $service->isConfigured()) {

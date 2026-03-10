@@ -11,8 +11,14 @@ class WebhookSettingsController extends Controller
 {
     public function show()
     {
+        $user = auth()->user() ?? \App\Models\User::first();
+
+        if (! $user) {
+            return redirect('/dashboard')->with('error', 'Aucun utilisateur configuré.');
+        }
+
         return view('pages.settings.webhook', [
-            'user' => auth()->user() ?? \App\Models\User::first(),
+            'user' => $user,
             'availableEvents' => $this->getAvailableEvents(),
         ]);
     }
