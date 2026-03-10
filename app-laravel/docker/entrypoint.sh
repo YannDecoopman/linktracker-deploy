@@ -3,6 +3,9 @@ set -e
 
 cd /var/www/html
 
+# Clear stale cache from build (may reference dev-only packages like Sail)
+rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+
 # Run package discover (skipped at build time with --no-scripts)
 php artisan package:discover --ansi 2>/dev/null || true
 

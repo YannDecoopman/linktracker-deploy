@@ -11,6 +11,8 @@
 /database/database.sqlite
 /database/*.sqlite
 /bootstrap/cache/config.php
+/bootstrap/cache/packages.php
+/bootstrap/cache/services.php
 debug_path.php
 .phpunit.result.cache
 Homestead.json
